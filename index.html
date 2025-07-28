@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Performance de Campanhas</title>
+    
+    <!-- Tailwind CSS para estilização rápida e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js para gráficos interativos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns/"></script>
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* Estilos personalizados para um design moderno e animações */
+        body {
+            background-color: #f0f2f5; /* Um cinza mais suave para o fundo */
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        /* Animação de carregamento (spinner) */
+        .loader {
+            border: 4px solid #e9e9e9;
+            border-top: 4px solid #059669; /* emerald-600 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Estilo para a linha da tabela selecionada */
+        .campaign-row.selected {
+            background-color: #ecfdf5; /* emerald-50 */
+        }
+        
+        /* Estilos para os filtros de data */
+        .date-filter-btn.active {
+            background-color: #ffffff;
+            color: #059669; /* emerald-600 */
+            font-weight: 600;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+
+        /* Animações de entrada */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
+            opacity: 0; /* Começa invisível */
+        }
+        
+        /* Estilos para o modal de análise */
+        #analysis-modal-content h3 {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 700;
+            color: #1e293b; /* slate-800 */
+            margin-top: 1.25rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #e2e8f0; /* slate-200 */
+            padding-bottom: 0.5rem;
+        }
+        #analysis-modal-content ul {
+            list-style-type: none;
+            padding-left: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        #analysis-modal-content li {
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: flex-start;
+        }
+        #analysis-modal-content li::before {
+            content: '✓';
+            color: #10b981; /* emerald-500 */
+            font-weight: bold;
+            margin-right: 0.75rem;
+            margin-top: 0.125rem;
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto">
+        <!-- Cabeçalho da Aplicação -->
+        <header class="mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div class="w-full">
+                    <h1 class="text-4xl font-extrabold text-slate-900">Dashboard de Performance</h1>
+                    <p class="text-slate-500 mt-1">Análise de campanhas de tráfego pago.</p>
+                </div>
+                <div class="flex flex-col items-end gap-2 w-full md:w-auto flex-shrink-0">
+                    <!-- NOVO: Display de Saldo do Cliente -->
+                    <div id="client-balance-container" class="bg-white p-2 px-4 rounded-lg shadow-sm border w-full md:w-auto min-h-[58px] flex items-center justify-center">
+                        <!-- Conteúdo injetado pelo JS -->
+                    </div>
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <select id="client-selector" class="block w-full md:w-52 p-2.5 border border-slate-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all">
+                            <option>A carregar clientes...</option>
+                        </select>
+                        <button id="refresh-button" class="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <!-- Filtros de Data -->
+                <div id="date-filters" class="flex flex-wrap gap-1 p-1 bg-slate-200 rounded-full w-fit">
+                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all active" data-period="today">Ontem</button>
+                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="7">Últimos 7 dias</button>
+                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="30">Últimos 30 dias</button>
+                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="month">Mês Atual</button>
+                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="all">Todo o Período</button>
+                </div>
+                 <!-- Botão de Análise com IA -->
+                <button id="gemini-analysis-button" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-2.5 px-5 rounded-full flex items-center justify-center gap-2 shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-wait">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    <span>Gerar Análise com IA</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Container de Carregamento Principal -->
+        <div id="loading-container" class="hidden items-center justify-center p-16 flex-col gap-4 text-center">
+            <div class="loader"></div>
+            <p class="text-slate-600 font-semibold text-lg">A buscar dados no Supabase...</p>
+        </div>
+
+        <!-- Conteúdo do Dashboard -->
+        <main id="dashboard-content" class="hidden">
+            <!-- Seção de KPIs (Indicadores Chave de Performance) -->
+            <section id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5 md:gap-6 mb-8">
+                <!-- Os cards de KPI serão inseridos aqui pelo JavaScript -->
+            </section>
+
+            <!-- Seção de Tabela e Gráfico (Layout Vertical) -->
+            <div class="flex flex-col gap-8">
+                <!-- Tabela de Campanhas -->
+                <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                    <h2 id="table-title" class="text-xl font-bold mb-4 text-slate-900">Detalhes das Campanhas</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-slate-600">
+                            <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4 rounded-l-lg">Campanha</th>
+                                    <th scope="col" class="px-6 py-4">Status</th>
+                                    <th scope="col" class="px-6 py-4 text-right">Gasto</th>
+                                    <th scope="col" class="px-6 py-4 text-right">Cliques</th>
+                                    <th scope="col" class="px-6 py-4 text-right">CPC</th>
+                                    <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
+                                    <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
+                                </tr>
+                            </thead>
+                            <tbody id="campaigns-table-body">
+                                <!-- As linhas da tabela serão inseridas aqui -->
+                            </tbody>
+                        </table>
+                        <div id="no-campaigns-message" class="hidden text-center p-8 text-slate-500">
+                            <i class="fas fa-folder-open fa-2x mb-2"></i>
+                            <p>Nenhuma campanha encontrada para este cliente.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Histórico -->
+                <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                    <h2 id="chart-title" class="text-xl font-bold mb-4 text-slate-900">Performance Diária do Cliente</h2>
+                    <div id="chart-container" class="relative h-96">
+                         <canvas id="performance-chart"></canvas>
+                         <div id="no-chart-data-message" class="hidden absolute inset-0 flex items-center justify-center text-center text-slate-500">
+                            <i class="fas fa-chart-line fa-2x mb-2"></i>
+                            <p>Sem dados históricos para o período selecionado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Modal de Análise da IA -->
+    <div id="analysis-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50 transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            <header class="p-4 border-b flex justify-between items-center">
+                 <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-wand-magic-sparkles text-emerald-600"></i>
+                    Análise de Performance (IA)
+                 </h3>
+                 <button id="close-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </header>
+            <div id="analysis-modal-content" class="p-6 overflow-y-auto text-slate-700">
+                 <!-- O conteúdo da análise será inserido aqui -->
+            </div>
+            <footer class="p-4 bg-slate-50 border-t flex justify-end gap-3">
+                <button id="copy-analysis-btn" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full font-semibold flex items-center gap-2">
+                    <i class="fas fa-copy"></i>
+                    <span>Copiar</span>
+                </button>
+            </footer>
+        </div>
+    </div>
+    <!-- Elemento para cópia de texto -->
+    <textarea id="copy-helper" class="absolute -left-full"></textarea>
+
+
+    <script type="module">
+        // --- 1. CONFIGURAÇÃO E INICIALIZAÇÃO ---
+
+        const SUPABASE_URL = 'https://gfwwcclgvfyeudcxkxjy.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmd3djY2xndmZ5ZXVkY3hreGp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc2NDg1MjcsImV4cCI6MjA1MzIyNDUyN30.Tz_NJ1wljI2p4GrIYat3_C_uJqU4b_pruN_-ootPqRQ';
+
+        const { createClient } = supabase;
+        const dbClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- 2. ELEMENTOS DO DOM ---
+
+        const clientSelector = document.getElementById('client-selector');
+        const refreshButton = document.getElementById('refresh-button');
+        const dateFiltersContainer = document.getElementById('date-filters');
+        const loadingContainer = document.getElementById('loading-container');
+        const dashboardContent = document.getElementById('dashboard-content');
+        const kpiGrid = document.getElementById('kpi-grid');
+        const tableTitle = document.getElementById('table-title');
+        const campaignsTableBody = document.getElementById('campaigns-table-body');
+        const noCampaignsMessage = document.getElementById('no-campaigns-message');
+        const chartTitle = document.getElementById('chart-title');
+        const performanceChartCanvas = document.getElementById('performance-chart');
+        const noChartDataMessage = document.getElementById('no-chart-data-message');
+        const geminiAnalysisButton = document.getElementById('gemini-analysis-button');
+        const analysisModal = document.getElementById('analysis-modal');
+        const analysisModalContent = document.getElementById('analysis-modal-content');
+        const closeAnalysisModalButton = document.getElementById('close-analysis-modal');
+        const copyAnalysisButton = document.getElementById('copy-analysis-btn');
+        const copyHelper = document.getElementById('copy-helper');
+        const clientBalanceContainer = document.getElementById('client-balance-container');
+
+
+        let performanceChart = null; 
+        let lastAggregatedData = null; // Armazena os últimos dados processados para a IA
+        let clientFullHistory = []; // Armazena todo o histórico do cliente para o período
+        let currentChartCampaignId = null; // Armazena o ID da campanha selecionada para o gráfico
+        let allClients = []; // Armazena todos os clientes e seus saldos
+
+        // --- 3. FUNÇÕES DE FORMATAÇÃO E UTILIDADE ---
+
+        const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const formatDecimal = (value) => (value || 0).toFixed(2);
+        const formatInteger = (value) => (value || 0).toLocaleString('pt-BR');
+
+        const createKpiCard = (title, value, iconClass, delay) => `
+            <div class="bg-white p-5 rounded-xl shadow-lg border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:-translate-y-1 fade-in-up" style="animation-delay: ${delay}ms;">
+                <div class="bg-emerald-100 text-emerald-600 w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="${iconClass} fa-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm text-slate-500 font-medium">${title}</p>
+                    <p class="text-2xl font-bold text-slate-900 break-words">${value}</p>
+                </div>
+            </div>
+        `;
+
+        // --- 4. LÓGICA DE DADOS (FETCH E PROCESSAMENTO) ---
+
+        /**
+         * Busca todos os clientes da tabela 'trafego_clientes', incluindo o saldo.
+         */
+        async function fetchClients() {
+            const { data, error } = await dbClient
+                .from('trafego_clientes')
+                .select('id, nome, saldo')
+                .order('nome', { ascending: true });
+
+            if (error) {
+                console.error('Erro ao buscar clientes:', error);
+                clientSelector.innerHTML = '<option>Erro ao carregar</option>';
+                return;
+            }
+            
+            allClients = data; // Armazena os dados completos dos clientes
+            clientSelector.innerHTML = data.map(client => `<option value="${client.id}">${client.nome}</option>`).join('');
+            
+            if (data.length > 0) {
+                await updateDashboard();
+            }
+        }
+
+        /**
+         * Função principal que atualiza todo o dashboard com base nos filtros selecionados.
+         */
+        async function updateDashboard() {
+            const clientId = clientSelector.value;
+            const activeFilter = dateFiltersContainer.querySelector('.active');
+            const period = activeFilter.dataset.period;
+
+            if (!clientId) return;
+
+            loadingContainer.classList.remove('hidden');
+            loadingContainer.classList.add('flex');
+            dashboardContent.classList.add('hidden');
+            geminiAnalysisButton.disabled = true;
+            currentChartCampaignId = null; // Reseta o filtro do gráfico
+            
+            renderClientBalance(clientId); // Renderiza o saldo do cliente selecionado
+
+            try {
+                // 1. Busca as campanhas do cliente
+                const { data: campaigns, error: campaignsError } = await dbClient
+                    .from('trafego_campanhas')
+                    .select('id, nome, status_campanha')
+                    .eq('cliente_id', clientId);
+
+                if (campaignsError) throw campaignsError;
+
+                if (campaigns.length === 0) {
+                    renderKpiCards({});
+                    renderCampaignsTable([]);
+                    noCampaignsMessage.classList.remove('hidden');
+                    if (performanceChart) performanceChart.destroy();
+                    noChartDataMessage.classList.remove('hidden');
+                    lastAggregatedData = null;
+                    return;
+                }
+                
+                noCampaignsMessage.classList.add('hidden');
+                const campaignIds = campaigns.map(c => c.id);
+
+                // 2. Busca TODO o histórico do cliente para determinar a data mais recente
+                const { data: allHistory, error: allHistoryError } = await dbClient
+                    .from('trafego_historico')
+                    .select('data_relatorio, gasto, cliques, impressoes, campanha_id')
+                    .in('campanha_id', campaignIds);
+
+                if (allHistoryError) throw allHistoryError;
+
+                if (allHistory.length === 0) {
+                    renderKpiCards({});
+                    renderCampaignsTable([]);
+                    if (performanceChart) performanceChart.destroy();
+                    noChartDataMessage.classList.remove('hidden');
+                    lastAggregatedData = null;
+                    return;
+                }
+
+                // 3. Encontra a data mais recente nos dados
+                const latestDateStr = allHistory.reduce((max, h) => h.data_relatorio > max ? h.data_relatorio : max, allHistory[0].data_relatorio);
+
+                // 4. Calcula o intervalo de datas com base na data mais recente
+                const { startDate, endDate } = getDateRange(period, latestDateStr);
+                tableTitle.textContent = `Detalhes das Campanhas (${activeFilter.textContent})`;
+
+                // 5. Filtra o histórico em memória com base no intervalo de datas correto
+                const filteredHistory = allHistory.filter(h => {
+                    if (period === 'all') return true;
+                    const hDate = new Date(h.data_relatorio);
+                    return hDate >= startDate && hDate <= endDate;
+                });
+                clientFullHistory = filteredHistory; // Armazena o histórico filtrado para uso posterior
+                
+                // 6. Processa e agrega os dados JÁ FILTRADOS
+                const aggregatedData = processAllData(campaigns, filteredHistory);
+                lastAggregatedData = aggregatedData;
+                
+                // 7. Renderiza os componentes do dashboard
+                renderKpiCards(aggregatedData.totals);
+                renderCampaignsTable(aggregatedData.campaignsWithMetrics);
+                renderPerformanceChart(aggregatedData.dailyHistory, startDate, endDate);
+                chartTitle.textContent = 'Performance Diária do Cliente'; // Reseta o título do gráfico
+
+            } catch (error) {
+                console.error('Erro ao carregar dados do dashboard:', error);
+                dashboardContent.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg"><b>Erro:</b> Não foi possível carregar os dados. Verifique o console.</div>`;
+                lastAggregatedData = null;
+            } finally {
+                loadingContainer.classList.add('hidden');
+                loadingContainer.classList.remove('flex');
+                dashboardContent.classList.remove('hidden');
+                geminiAnalysisButton.disabled = !lastAggregatedData || lastAggregatedData.totals.gasto === 0;
+            }
+        }
+
+        /**
+         * Calcula o intervalo de datas com base no período e na data mais recente dos dados.
+         * @param {string} period - O período ('today', '7', '30', 'month', 'all').
+         * @param {string} latestDateStr - A string da data mais recente dos dados.
+         * @returns {Object} - Um objeto com startDate e endDate.
+         */
+        function getDateRange(period, latestDateStr) {
+            const referenceDate = latestDateStr ? new Date(latestDateStr) : new Date();
+            
+            const endDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate(), 23, 59, 59, 999));
+            
+            let startDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate()));
+
+            if (period === 'today') {
+                // startDate já é o início do dia de referência
+            } else if (period === '7') {
+                startDate.setUTCDate(startDate.getUTCDate() - 6);
+            } else if (period === '30') {
+                startDate.setUTCDate(startDate.getUTCDate() - 29);
+            } else if (period === 'month') {
+                startDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), 1));
+            } else if (period === 'all') {
+                return { startDate: null, endDate: null };
+            }
+            return { startDate, endDate };
+        }
+
+        /**
+         * Processa os dados brutos para agregar totais e agrupar por dia.
+         * @param {Array} campaigns - Array de objetos de campanha.
+         * @param {Array} history - Array de objetos de histórico diário (já filtrado por data).
+         * @returns {Object} - Um objeto com totais, campanhas com métricas e histórico diário agregado.
+         */
+        function processAllData(campaigns, history) {
+            const campaignsWithMetrics = campaigns.map(campaign => {
+                const campaignHistory = history.filter(h => h.campanha_id === campaign.id);
+                const metrics = campaignHistory.reduce((acc, curr) => {
+                    acc.gasto += curr.gasto || 0;
+                    acc.cliques += curr.cliques || 0;
+                    acc.impressoes += curr.impressoes || 0;
+                    return acc;
+                }, { gasto: 0, cliques: 0, impressoes: 0 });
+
+                metrics.cpc = metrics.cliques > 0 ? metrics.gasto / metrics.cliques : 0;
+                metrics.ctr = metrics.impressoes > 0 ? (metrics.cliques / metrics.impressoes) * 100 : 0;
+                
+                return { ...campaign, ...metrics };
+            });
+
+            const totals = campaignsWithMetrics.reduce((acc, curr) => {
+                acc.gasto += curr.gasto;
+                acc.cliques += curr.cliques;
+                acc.impressoes += curr.impressoes;
+                return acc;
+            }, { gasto: 0, cliques: 0, impressoes: 0 });
+
+            totals.cpc = totals.cliques > 0 ? totals.gasto / totals.cliques : 0;
+            totals.cpm = totals.impressoes > 0 ? (totals.gasto / totals.impressoes) * 1000 : 0;
+            totals.ctr = totals.impressoes > 0 ? (totals.cliques / totals.impressoes) * 100 : 0;
+
+            const dailyHistoryMap = new Map();
+            history.forEach(item => {
+                const dateKey = new Date(item.data_relatorio).toISOString().split('T')[0];
+                if (!dailyHistoryMap.has(dateKey)) {
+                    dailyHistoryMap.set(dateKey, { gasto: 0, cliques: 0, impressoes: 0 });
+                }
+                const dayData = dailyHistoryMap.get(dateKey);
+                dayData.gasto += item.gasto || 0;
+                dayData.cliques += item.cliques || 0;
+                dayData.impressoes += item.impressoes || 0;
+            });
+
+            const dailyHistory = Array.from(dailyHistoryMap.entries())
+                .map(([date, metrics]) => ({ date, ...metrics }))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            return { totals, campaignsWithMetrics, dailyHistory };
+        }
+
+
+        // --- 5. FUNÇÕES DE RENDERIZAÇÃO ---
+
+        /**
+         * Renderiza o card de saldo do cliente no cabeçalho.
+         * @param {string} clientId - O ID do cliente selecionado.
+         */
+        function renderClientBalance(clientId) {
+            if (!allClients || allClients.length === 0) return;
+
+            const client = allClients.find(c => c.id == clientId);
+            if (!client) {
+                clientBalanceContainer.innerHTML = '';
+                return;
+            }
+
+            if (client.saldo === null || client.saldo === undefined) {
+                clientBalanceContainer.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-xs font-medium text-slate-500">Status</p>
+                        <p class="font-bold text-slate-700">Pré-Pago</p>
+                    </div>`;
+            } else {
+                const balanceValue = parseFloat(client.saldo);
+                const colorClass = balanceValue < 30 ? 'text-red-600' : 'text-emerald-600';
+                clientBalanceContainer.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-xs font-medium text-slate-500">Saldo Atual</p>
+                        <p class="font-extrabold text-lg ${colorClass}">${formatCurrency(balanceValue)}</p>
+                    </div>`;
+            }
+        }
+
+        function renderKpiCards(totals) {
+            kpiGrid.innerHTML = `
+                ${createKpiCard('Investimento Total', formatCurrency(totals.gasto), 'fas fa-wallet', 0)}
+                ${createKpiCard('Cliques Totais', formatInteger(totals.cliques), 'fas fa-mouse-pointer', 50)}
+                ${createKpiCard('Impressões', formatInteger(totals.impressoes), 'fas fa-eye', 100)}
+                ${createKpiCard('CPC Médio', formatCurrency(totals.cpc), 'fas fa-hand-holding-usd', 150)}
+                ${createKpiCard('CPM Médio', formatCurrency(totals.cpm), 'fas fa-users', 200)}
+                ${createKpiCard('CTR Médio', `${formatDecimal(totals.ctr)}%`, 'fas fa-chart-pie', 250)}
+            `;
+        }
+        
+        function renderCampaignsTable(campaignsData) {
+            if (!campaignsData || campaignsData.length === 0) {
+                campaignsTableBody.innerHTML = '';
+                noCampaignsMessage.classList.remove('hidden');
+                return;
+            }
+
+            const activeCampaignsInPeriod = campaignsData.filter(c => c.gasto > 0);
+
+            if (activeCampaignsInPeriod.length === 0) {
+                campaignsTableBody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">Nenhuma campanha teve atividade no período selecionado.</td></tr>`;
+                return;
+            }
+
+            campaignsTableBody.innerHTML = activeCampaignsInPeriod.map(campaign => `
+                <tr class="campaign-row bg-white border-b hover:bg-slate-50 cursor-pointer transition-colors" data-campaign-id="${campaign.id}" data-campaign-name="${campaign.nome}">
+                    <th scope="row" class="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">${campaign.nome}</th>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${campaign.status_campanha === 'ATIVA' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}">${campaign.status_campanha}</span>
+                    </td>
+                    <td class="px-6 py-4 text-right">${formatCurrency(campaign.gasto)}</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(campaign.cliques)}</td>
+                    <td class="px-6 py-4 text-right">${formatCurrency(campaign.cpc)}</td>
+                    <td class="px-6 py-4 text-right">${formatDecimal(campaign.ctr)}%</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(campaign.impressoes)}</td>
+                </tr>
+            `).join('');
+
+            document.querySelectorAll('.campaign-row').forEach(row => {
+                row.addEventListener('click', handleCampaignRowClick);
+            });
+        }
+
+        /**
+         * Renderiza ou atualiza o gráfico de performance com dados diários agregados.
+         * @param {Array} dailyHistory - Array com o histórico diário agregado do cliente.
+         * @param {Date} startDate - A data de início do período para o eixo do gráfico.
+         * @param {Date} endDate - A data de fim do período para o eixo do gráfico.
+         */
+        function renderPerformanceChart(dailyHistory, startDate, endDate) {
+            if (!dailyHistory || dailyHistory.length === 0) {
+                noChartDataMessage.classList.remove('hidden');
+                if (performanceChart) performanceChart.destroy();
+                return;
+            }
+            
+            noChartDataMessage.classList.add('hidden');
+            
+            const ctx = performanceChartCanvas.getContext('2d');
+            const lineGradient = ctx.createLinearGradient(0, 0, 0, 350);
+            lineGradient.addColorStop(0, 'rgba(16, 185, 129, 0.5)');
+            lineGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+            const barGradient = ctx.createLinearGradient(0, 0, 0, 350);
+            barGradient.addColorStop(0, 'rgba(245, 158, 11, 0.8)');
+            barGradient.addColorStop(1, 'rgba(245, 158, 11, 0.6)');
+
+            const labels = dailyHistory.map(h => h.date);
+            const gastoData = dailyHistory.map(h => h.gasto);
+            const cliquesData = dailyHistory.map(h => h.cliques);
+
+            const chartData = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Gasto (R$)',
+                        data: gastoData,
+                        borderColor: '#10b981', // emerald-500
+                        backgroundColor: lineGradient,
+                        yAxisID: 'y',
+                        type: 'line',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#10b981',
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBorderColor: 'white',
+                        pointHoverBorderWidth: 2,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'Cliques',
+                        data: cliquesData,
+                        backgroundColor: barGradient,
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y1',
+                        type: 'bar',
+                        borderRadius: 6,
+                        barPercentage: 0.7
+                    }
+                ]
+            };
+
+            const config = {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
+                    },
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: { 
+                            type: 'time', 
+                            time: { unit: 'day', tooltipFormat: 'dd/MM/yyyy' }, 
+                            grid: { display: false },
+                            ticks: { color: '#64748b' },
+                            min: startDate ? startDate.toISOString().split('T')[0] : undefined,
+                            max: endDate ? endDate.toISOString().split('T')[0] : undefined
+                        },
+                        y: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'left', 
+                            grid: { color: '#e2e8f0' },
+                            ticks: { color: '#64748b' }
+                        },
+                        y1: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'right', 
+                            grid: { drawOnChartArea: false } ,
+                            ticks: { color: '#64748b' }
+                        },
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8,
+                                color: '#475569'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleFont: { weight: 'bold' },
+                            bodySpacing: 4,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        label += context.dataset.yAxisID === 'y' ? formatCurrency(context.parsed.y) : formatInteger(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+            };
+
+            if (performanceChart) performanceChart.destroy();
+            performanceChart = new Chart(performanceChartCanvas, config);
+        }
+        
+        // --- 6. LÓGICA DA ANÁLISE COM IA (GEMINI) E INTERATIVIDADE ---
+        
+        function handleCampaignRowClick(event) {
+            const row = event.currentTarget;
+            const campaignId = row.dataset.campaignId;
+            const campaignName = row.dataset.campaignName;
+
+            // Desselecionar se clicar na mesma campanha novamente
+            if (campaignId === currentChartCampaignId) {
+                currentChartCampaignId = null;
+                document.querySelectorAll('.campaign-row').forEach(r => r.classList.remove('selected'));
+                chartTitle.textContent = 'Performance Diária do Cliente';
+                
+                // Re-renderiza o gráfico com os dados globais
+                const { startDate, endDate } = getDateRange(dateFiltersContainer.querySelector('.active').dataset.period, clientFullHistory[0]?.data_relatorio);
+                renderPerformanceChart(lastAggregatedData.dailyHistory, startDate, endDate);
+                return;
+            }
+
+            // Selecionar uma nova campanha
+            currentChartCampaignId = campaignId;
+            document.querySelectorAll('.campaign-row').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            chartTitle.textContent = `Performance: ${campaignName}`;
+
+            // Filtra o histórico apenas para esta campanha
+            const campaignHistory = clientFullHistory.filter(h => h.campanha_id === campaignId);
+            
+            // Agrega os dados diários para a campanha selecionada
+            const dailyHistoryMap = new Map();
+            campaignHistory.forEach(item => {
+                const dateKey = new Date(item.data_relatorio).toISOString().split('T')[0];
+                if (!dailyHistoryMap.has(dateKey)) {
+                    dailyHistoryMap.set(dateKey, { gasto: 0, cliques: 0, impressoes: 0 });
+                }
+                const dayData = dailyHistoryMap.get(dateKey);
+                dayData.gasto += item.gasto || 0;
+                dayData.cliques += item.cliques || 0;
+                dayData.impressoes += item.impressoes || 0;
+            });
+
+            const singleCampaignDailyHistory = Array.from(dailyHistoryMap.entries())
+                .map(([date, metrics]) => ({ date, ...metrics }))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Re-renderiza o gráfico com os dados da campanha
+            const { startDate, endDate } = getDateRange(dateFiltersContainer.querySelector('.active').dataset.period, clientFullHistory[0]?.data_relatorio);
+            renderPerformanceChart(singleCampaignDailyHistory, startDate, endDate);
+        }
+
+        async function handleGenerateAnalysis() {
+            if (!lastAggregatedData) {
+                alert("Não há dados carregados para análise. Por favor, atualize o dashboard.");
+                return;
+            }
+            
+            analysisModal.classList.remove('hidden');
+            analysisModalContent.innerHTML = `<div class="flex flex-col items-center justify-center p-8 gap-4"><div class="loader"></div><p class="text-slate-600 font-semibold">A IA está a analisar os dados...</p></div>`;
+            geminiAnalysisButton.disabled = true;
+            const originalButtonText = geminiAnalysisButton.querySelector('span').textContent;
+            geminiAnalysisButton.querySelector('span').textContent = 'A analisar...';
+
+            try {
+                const prompt = createPromptForGemini(lastAggregatedData);
+                
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0) {
+                    const analysisText = result.candidates[0].content.parts[0].text;
+                    renderAnalysisResult(analysisText);
+                } else {
+                    throw new Error("A resposta da IA não contém conteúdo válido.");
+                }
+
+            } catch (error) {
+                console.error("Erro ao gerar análise com Gemini:", error);
+                analysisModalContent.innerHTML = `<div class="p-4 text-red-700 bg-red-100 rounded-lg"><strong>Erro:</strong> Não foi possível gerar a análise. Por favor, tente novamente.</div>`;
+            } finally {
+                geminiAnalysisButton.disabled = false;
+                geminiAnalysisButton.querySelector('span').textContent = originalButtonText;
+            }
+        }
+
+        function createPromptForGemini(data) {
+            const clientName = clientSelector.options[clientSelector.selectedIndex].text;
+            const period = dateFiltersContainer.querySelector('.active').textContent;
+            
+            const { totals, campaignsWithMetrics } = data;
+
+            const sortedCampaigns = [...campaignsWithMetrics]
+                .filter(c => c.gasto > 0)
+                .sort((a, b) => b.gasto - a.gasto);
+
+            let campaignsSummary = sortedCampaigns
+                .slice(0, 5)
+                .map(c => `- Campanha "${c.nome}": Gasto de ${formatCurrency(c.gasto)}, CTR de ${formatDecimal(c.ctr)}%, CPC de ${formatCurrency(c.cpc)}`)
+                .join('\n');
+            
+            if (sortedCampaigns.length === 0) {
+                campaignsSummary = "Nenhuma campanha teve atividade neste período.";
+            }
+
+            return `
+                Você é um especialista em marketing digital e análise de tráfego pago.
+                Analise os seguintes dados de performance para o cliente "${clientName}" referentes ao período: "${period}".
+
+                **Métricas Gerais do Período:**
+                - Investimento Total: ${formatCurrency(totals.gasto)}
+                - Cliques Totais: ${formatInteger(totals.cliques)}
+                - Impressões Totais: ${formatInteger(totals.impressoes)}
+                - Custo por Clique (CPC) Médio: ${formatCurrency(totals.cpc)}
+                - Custo por Mil Impressões (CPM) Médio: ${formatCurrency(totals.cpm)}
+                - Taxa de Cliques (CTR) Média: ${formatDecimal(totals.ctr)}%
+
+                **Resumo das Principais Campanhas Ativas no Período:**
+                ${campaignsSummary}
+
+                Com base nestes dados, forneça uma análise concisa em português para um relatório. Use o seguinte formato de markdown:
+                ### Resumo Geral
+                [Faça um resumo de 1-2 frases sobre a performance geral da conta no período.]
+
+                ### Destaques Positivos
+                - [Ponto positivo 1, ex: O CTR geral está bom, indicando anúncios relevantes.]
+                - [Ponto positivo 2, ex: A campanha X está com um CPC baixo.]
+
+                ### Pontos de Atenção
+                - [Ponto de atenção 1, ex: O CPC da campanha Y está acima da média.]
+                - [Ponto de atenção 2, ex: A campanha Z teve um gasto alto mas baixo CTR.]
+
+                ### Recomendação
+                - [Forneça uma recomendação clara e acionável com base nos pontos de atenção. Ex: Sugiro pausar a campanha Z e realocar o orçamento para a campanha X, que está a performar melhor.]
+            `;
+        }
+
+        function renderAnalysisResult(text) {
+            const html = text
+                .replace(/### (.*)/g, '<h3>$1</h3>')
+                .replace(/\* (.*)/g, '<li>$1</li>')
+                .replace(/- (.*)/g, '<li>$1</li>')
+                .replace(/\n/g, '<br>')
+                .replace(/<br><li>/g, '<li>')
+                .replace(/<\/li><br>/g, '</li>'); 
+            
+            const finalHtml = html.replace(/<li>(.*?)<\/li>/gs, (match) => {
+                return `<ul>${match}</ul>`;
+            }).replace(/<\/ul><ul>/g, '');
+
+            analysisModalContent.innerHTML = finalHtml;
+        }
+
+
+        // --- 7. EVENT LISTENERS E INICIALIZAÇÃO DA APLICAÇÃO ---
+
+        clientSelector.addEventListener('change', updateDashboard);
+        refreshButton.addEventListener('click', updateDashboard);
+
+        dateFiltersContainer.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                dateFiltersContainer.querySelector('.active').classList.remove('active');
+                event.target.classList.add('active');
+                updateDashboard();
+            }
+        });
+
+        // Listeners do modal de análise
+        geminiAnalysisButton.addEventListener('click', handleGenerateAnalysis);
+        closeAnalysisModalButton.addEventListener('click', () => analysisModal.classList.add('hidden'));
+        analysisModal.addEventListener('click', (event) => {
+            if (event.target === analysisModal) {
+                analysisModal.classList.add('hidden');
+            }
+        });
+        copyAnalysisButton.addEventListener('click', () => {
+            const textToCopy = analysisModalContent.innerText;
+            copyHelper.value = textToCopy;
+            copyHelper.select();
+            document.execCommand('copy');
+            copyAnalysisButton.querySelector('span').textContent = 'Copiado!';
+            setTimeout(() => {
+                copyAnalysisButton.querySelector('span').textContent = 'Copiar';
+            }, 2000);
+        });
+
+        document.addEventListener('DOMContentLoaded', fetchClients);
+
+    </script>
+</body>
+</html>
