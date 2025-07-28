@@ -104,24 +104,30 @@
     <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto">
         <!-- Cabeçalho da Aplicação -->
         <header class="mb-8">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <div class="w-full">
-                    <h1 class="text-4xl font-extrabold text-slate-900">Dashboard de Performance</h1>
-                    <p class="text-slate-500 mt-1">Análise de campanhas de tráfego pago.</p>
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                <!-- Título e Subtítulo -->
+                <div class="w-full md:w-1/4">
+                    <h1 class="text-3xl font-extrabold text-slate-900 whitespace-nowrap">Dashboard</h1>
+                    <p class="text-slate-500 mt-1 whitespace-nowrap">Performance de Campanhas</p>
                 </div>
-                <div class="flex flex-col items-end gap-2 w-full md:w-auto flex-shrink-0">
-                    <!-- NOVO: Display de Saldo do Cliente -->
-                    <div id="client-balance-container" class="bg-white p-2 px-4 rounded-lg shadow-sm border w-full md:w-auto min-h-[58px] flex items-center justify-center">
-                        <!-- Conteúdo injetado pelo JS -->
+                <!-- Pesquisa Central -->
+                <div class="w-full md:w-1/2 relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-slate-400"></i>
                     </div>
-                    <div class="flex items-center gap-3 w-full md:w-auto">
-                        <select id="client-selector" class="block w-full md:w-52 p-2.5 border border-slate-300 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all">
-                            <option>A carregar clientes...</option>
-                        </select>
-                        <button id="refresh-button" class="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
+                    <input type="search" id="client-search-input" class="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-full bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all" placeholder="Pesquisar empresa...">
+                    <div id="search-results-container" class="hidden absolute mt-2 w-full rounded-lg bg-white shadow-xl border z-20 max-h-60 overflow-y-auto">
+                        <!-- Resultados da pesquisa aqui -->
                     </div>
+                </div>
+                <!-- Saldo e Ações -->
+                <div class="w-full md:w-1/4 flex items-center justify-end gap-3">
+                    <div id="client-balance-container" class="bg-white p-2 px-4 rounded-lg shadow-sm border min-h-[50px] flex items-center justify-center">
+                        <!-- Conteúdo do saldo -->
+                    </div>
+                    <button id="refresh-button" class="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex-shrink-0 h-[50px] w-[50px]">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
             </div>
              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -150,7 +156,7 @@
         <!-- Conteúdo do Dashboard -->
         <main id="dashboard-content" class="hidden">
             <!-- Seção de KPIs (Indicadores Chave de Performance) -->
-            <section id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5 md:gap-6 mb-8">
+            <section id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 mb-8">
                 <!-- Os cards de KPI serão inseridos aqui pelo JavaScript -->
             </section>
 
@@ -234,7 +240,8 @@
 
         // --- 2. ELEMENTOS DO DOM ---
 
-        const clientSelector = document.getElementById('client-selector');
+        const clientSearchInput = document.getElementById('client-search-input');
+        const searchResultsContainer = document.getElementById('search-results-container');
         const refreshButton = document.getElementById('refresh-button');
         const dateFiltersContainer = document.getElementById('date-filters');
         const loadingContainer = document.getElementById('loading-container');
@@ -260,6 +267,7 @@
         let clientFullHistory = []; // Armazena todo o histórico do cliente para o período
         let currentChartCampaignId = null; // Armazena o ID da campanha selecionada para o gráfico
         let allClients = []; // Armazena todos os clientes e seus saldos
+        let selectedClientId = null; // Armazena o ID do cliente selecionado
 
         // --- 3. FUNÇÕES DE FORMATAÇÃO E UTILIDADE ---
 
@@ -267,14 +275,19 @@
         const formatDecimal = (value) => (value || 0).toFixed(2);
         const formatInteger = (value) => (value || 0).toLocaleString('pt-BR');
 
-        const createKpiCard = (title, value, iconClass, delay) => `
-            <div class="bg-white p-5 rounded-xl shadow-lg border border-slate-100 flex items-center gap-5 transition-all hover:shadow-xl hover:-translate-y-1 fade-in-up" style="animation-delay: ${delay}ms;">
-                <div class="bg-emerald-100 text-emerald-600 w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0">
-                    <i class="${iconClass} fa-lg"></i>
+        const createKpiCard = (title, value, iconClass, description, delay) => `
+            <div class="group relative bg-white p-5 rounded-xl shadow-lg border border-slate-100 flex flex-col justify-between transition-all hover:shadow-xl hover:-translate-y-1 fade-in-up" style="animation-delay: ${delay}ms;">
+                <div class="flex items-center gap-3 text-slate-500">
+                    <i class="${iconClass} fa-sm"></i>
+                    <p class="text-sm font-medium">${title}</p>
                 </div>
-                <div class="min-w-0">
-                    <p class="text-sm text-slate-500 font-medium">${title}</p>
-                    <p class="text-2xl font-bold text-slate-900 break-words">${value}</p>
+                <div>
+                    <p class="text-3xl font-extrabold text-slate-900 mt-2 break-words">${value}</p>
+                </div>
+                <!-- Tooltip -->
+                <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-lg bg-emerald-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    ${description}
+                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-emerald-800"></div>
                 </div>
             </div>
         `;
@@ -292,15 +305,15 @@
 
             if (error) {
                 console.error('Erro ao buscar clientes:', error);
-                clientSelector.innerHTML = '<option>Erro ao carregar</option>';
+                clientSearchInput.placeholder = 'Erro ao carregar clientes';
                 return;
             }
             
             allClients = data; // Armazena os dados completos dos clientes
-            clientSelector.innerHTML = data.map(client => `<option value="${client.id}">${client.nome}</option>`).join('');
             
             if (data.length > 0) {
-                await updateDashboard();
+                // Seleciona o primeiro cliente por defeito
+                selectClient(data[0]);
             }
         }
 
@@ -308,7 +321,7 @@
          * Função principal que atualiza todo o dashboard com base nos filtros selecionados.
          */
         async function updateDashboard() {
-            const clientId = clientSelector.value;
+            const clientId = selectedClientId;
             const activeFilter = dateFiltersContainer.querySelector('.active');
             const period = activeFilter.dataset.period;
 
@@ -511,13 +524,22 @@
         }
 
         function renderKpiCards(totals) {
+            const kpiInfo = {
+                gasto: { title: 'Investimento Total', icon: 'fas fa-wallet', description: 'Este é o valor total que foi gasto em todas as campanhas no período selecionado. Ajuda a controlar o orçamento.' },
+                cliques: { title: 'Cliques Totais', icon: 'fas fa-mouse-pointer', description: 'O número total de vezes que os seus anúncios foram clicados. Indica o quão atrativos os seus anúncios são para o público.' },
+                impressoes: { title: 'Impressões', icon: 'fas fa-eye', description: 'O número de vezes que os seus anúncios foram exibidos. É a base para medir o alcance e a frequência.' },
+                cpc: { title: 'CPC Médio', icon: 'fas fa-hand-holding-usd', description: 'Custo Por Clique. O valor médio pago por cada clique no anúncio. Quanto menor, mais eficiente é o seu custo.' },
+                cpm: { title: 'CPM Médio', icon: 'fas fa-users', description: 'Custo Por Mil Impressões. O valor médio pago para que o seu anúncio seja exibido 1.000 vezes.' },
+                ctr: { title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques. A percentagem de pessoas que clicaram no seu anúncio após o verem. Um CTR alto indica um anúncio relevante.' }
+            };
+
             kpiGrid.innerHTML = `
-                ${createKpiCard('Investimento Total', formatCurrency(totals.gasto), 'fas fa-wallet', 0)}
-                ${createKpiCard('Cliques Totais', formatInteger(totals.cliques), 'fas fa-mouse-pointer', 50)}
-                ${createKpiCard('Impressões', formatInteger(totals.impressoes), 'fas fa-eye', 100)}
-                ${createKpiCard('CPC Médio', formatCurrency(totals.cpc), 'fas fa-hand-holding-usd', 150)}
-                ${createKpiCard('CPM Médio', formatCurrency(totals.cpm), 'fas fa-users', 200)}
-                ${createKpiCard('CTR Médio', `${formatDecimal(totals.ctr)}%`, 'fas fa-chart-pie', 250)}
+                ${createKpiCard(kpiInfo.gasto.title, formatCurrency(totals.gasto), kpiInfo.gasto.icon, kpiInfo.gasto.description, 0)}
+                ${createKpiCard(kpiInfo.cliques.title, formatInteger(totals.cliques), kpiInfo.cliques.icon, kpiInfo.cliques.description, 50)}
+                ${createKpiCard(kpiInfo.impressoes.title, formatInteger(totals.impressoes), kpiInfo.impressoes.icon, kpiInfo.impressoes.description, 100)}
+                ${createKpiCard(kpiInfo.cpc.title, formatCurrency(totals.cpc), kpiInfo.cpc.icon, kpiInfo.cpc.description, 150)}
+                ${createKpiCard(kpiInfo.cpm.title, formatCurrency(totals.cpm), kpiInfo.cpm.icon, kpiInfo.cpm.description, 200)}
+                ${createKpiCard(kpiInfo.ctr.title, `${formatDecimal(totals.ctr)}%`, kpiInfo.ctr.icon, kpiInfo.ctr.description, 250)}
             `;
         }
         
@@ -781,7 +803,7 @@
         }
 
         function createPromptForGemini(data) {
-            const clientName = clientSelector.options[clientSelector.selectedIndex].text;
+            const clientName = allClients.find(c => c.id == selectedClientId)?.nome || 'Cliente';
             const period = dateFiltersContainer.querySelector('.active').textContent;
             
             const { totals, campaignsWithMetrics } = data;
@@ -850,7 +872,53 @@
 
         // --- 7. EVENT LISTENERS E INICIALIZAÇÃO DA APLICAÇÃO ---
 
-        clientSelector.addEventListener('change', updateDashboard);
+        function selectClient(client) {
+            selectedClientId = client.id;
+            clientSearchInput.value = client.nome;
+            searchResultsContainer.classList.add('hidden');
+            updateDashboard();
+        }
+
+        clientSearchInput.addEventListener('input', () => {
+            const searchTerm = clientSearchInput.value.toLowerCase();
+            if (searchTerm.length < 3) {
+                searchResultsContainer.classList.add('hidden');
+                return;
+            }
+
+            const filteredClients = allClients.filter(client => 
+                client.nome.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredClients.length > 0) {
+                searchResultsContainer.innerHTML = filteredClients.map(client => 
+                    `<div class="p-3 hover:bg-emerald-50 cursor-pointer search-result-item" data-client-id="${client.id}">
+                        ${client.nome}
+                    </div>`
+                ).join('');
+                searchResultsContainer.classList.remove('hidden');
+            } else {
+                searchResultsContainer.classList.add('hidden');
+            }
+        });
+
+        searchResultsContainer.addEventListener('click', (event) => {
+            const target = event.target.closest('.search-result-item');
+            if (target) {
+                const clientId = target.dataset.clientId;
+                const client = allClients.find(c => c.id === clientId);
+                if (client) {
+                    selectClient(client);
+                }
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!clientSearchInput.contains(event.target) && !searchResultsContainer.contains(event.target)) {
+                searchResultsContainer.classList.add('hidden');
+            }
+        });
+
         refreshButton.addEventListener('click', updateDashboard);
 
         dateFiltersContainer.addEventListener('click', (event) => {
