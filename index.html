@@ -156,7 +156,7 @@
         <!-- Conteúdo do Dashboard -->
         <main id="dashboard-content" class="hidden">
             <!-- Seção de KPIs (Indicadores Chave de Performance) -->
-            <section id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 mb-8">
+            <section id="kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 mb-8">
                 <!-- Os cards de KPI serão inseridos aqui pelo JavaScript -->
             </section>
 
@@ -173,7 +173,7 @@
                                     <th scope="col" class="px-6 py-4">Status</th>
                                     <th scope="col" class="px-6 py-4 text-right">Gasto</th>
                                     <th scope="col" class="px-6 py-4 text-right">Cliques</th>
-                                    <th scope="col" class="px-6 py-4 text-right">CPC</th>
+                                    <th scope="col" class="px-6 py-4 text-right">Msgs. WPP</th>
                                     <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
                                     <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
                                 </tr>
@@ -339,7 +339,7 @@
                 // 1. Busca as campanhas do cliente
                 const { data: campaigns, error: campaignsError } = await dbClient
                     .from('trafego_campanhas')
-                    .select('id, nome, status_campanha')
+                    .select('id, nome, status_campanha, objetivo')
                     .eq('cliente_id', clientId);
 
                 if (campaignsError) throw campaignsError;
@@ -360,7 +360,7 @@
                 // 2. Busca TODO o histórico do cliente para determinar a data mais recente
                 const { data: allHistory, error: allHistoryError } = await dbClient
                     .from('trafego_historico')
-                    .select('data_relatorio, gasto, cliques, impressoes, campanha_id')
+                    .select('data_relatorio, gasto, cliques, impressoes, campanha_id, clique_direto_wpp, alcance, frequencia')
                     .in('campanha_id', campaignIds);
 
                 if (allHistoryError) throw allHistoryError;
@@ -448,13 +448,14 @@
             const campaignsWithMetrics = campaigns.map(campaign => {
                 const campaignHistory = history.filter(h => h.campanha_id === campaign.id);
                 const metrics = campaignHistory.reduce((acc, curr) => {
-                    acc.gasto += curr.gasto || 0;
-                    acc.cliques += curr.cliques || 0;
-                    acc.impressoes += curr.impressoes || 0;
+                    acc.gasto += Number(curr.gasto) || 0;
+                    acc.cliques += Number(curr.cliques) || 0;
+                    acc.impressoes += Number(curr.impressoes) || 0;
+                    acc.clique_direto_wpp += Number(curr.clique_direto_wpp) || 0;
+                    acc.alcance += Number(curr.alcance) || 0;
                     return acc;
-                }, { gasto: 0, cliques: 0, impressoes: 0 });
+                }, { gasto: 0, cliques: 0, impressoes: 0, clique_direto_wpp: 0, alcance: 0 });
 
-                metrics.cpc = metrics.cliques > 0 ? metrics.gasto / metrics.cliques : 0;
                 metrics.ctr = metrics.impressoes > 0 ? (metrics.cliques / metrics.impressoes) * 100 : 0;
                 
                 return { ...campaign, ...metrics };
@@ -464,23 +465,26 @@
                 acc.gasto += curr.gasto;
                 acc.cliques += curr.cliques;
                 acc.impressoes += curr.impressoes;
+                acc.clique_direto_wpp += curr.clique_direto_wpp;
+                acc.alcance += curr.alcance;
                 return acc;
-            }, { gasto: 0, cliques: 0, impressoes: 0 });
+            }, { gasto: 0, cliques: 0, impressoes: 0, clique_direto_wpp: 0, alcance: 0 });
 
-            totals.cpc = totals.cliques > 0 ? totals.gasto / totals.cliques : 0;
             totals.cpm = totals.impressoes > 0 ? (totals.gasto / totals.impressoes) * 1000 : 0;
             totals.ctr = totals.impressoes > 0 ? (totals.cliques / totals.impressoes) * 100 : 0;
+            totals.frequencia = totals.alcance > 0 ? totals.impressoes / totals.alcance : 0;
 
             const dailyHistoryMap = new Map();
             history.forEach(item => {
                 const dateKey = new Date(item.data_relatorio).toISOString().split('T')[0];
+                
                 if (!dailyHistoryMap.has(dateKey)) {
                     dailyHistoryMap.set(dateKey, { gasto: 0, cliques: 0, impressoes: 0 });
                 }
                 const dayData = dailyHistoryMap.get(dateKey);
-                dayData.gasto += item.gasto || 0;
-                dayData.cliques += item.cliques || 0;
-                dayData.impressoes += item.impressoes || 0;
+                dayData.gasto += Number(item.gasto) || 0;
+                dayData.cliques += Number(item.cliques) || 0;
+                dayData.impressoes += Number(item.impressoes) || 0;
             });
 
             const dailyHistory = Array.from(dailyHistoryMap.entries())
@@ -528,21 +532,46 @@
                 gasto: { title: 'Investimento Total', icon: 'fas fa-wallet', description: 'Este é o valor total que foi gasto em todas as campanhas no período selecionado. Ajuda a controlar o orçamento.' },
                 cliques: { title: 'Cliques Totais', icon: 'fas fa-mouse-pointer', description: 'O número total de vezes que os seus anúncios foram clicados. Indica o quão atrativos os seus anúncios são para o público.' },
                 impressoes: { title: 'Impressões', icon: 'fas fa-eye', description: 'O número de vezes que os seus anúncios foram exibidos. É a base para medir o alcance e a frequência.' },
-                cpc: { title: 'CPC Médio', icon: 'fas fa-hand-holding-usd', description: 'Custo Por Clique. O valor médio pago por cada clique no anúncio. Quanto menor, mais eficiente é o seu custo.' },
+                clique_direto_wpp: { title: 'Msgs. WhatsApp', icon: 'fab fa-whatsapp', description: 'O número total de cliques que iniciaram uma conversa no WhatsApp. Mede o interesse direto do cliente.' },
+                ctr: { title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques. A percentagem de pessoas que clicaram no seu anúncio após o verem. Um CTR alto indica um anúncio relevante.' },
                 cpm: { title: 'CPM Médio', icon: 'fas fa-users', description: 'Custo Por Mil Impressões. O valor médio pago para que o seu anúncio seja exibido 1.000 vezes.' },
-                ctr: { title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques. A percentagem de pessoas que clicaram no seu anúncio após o verem. Um CTR alto indica um anúncio relevante.' }
+                alcance: { title: 'Alcance', icon: 'fas fa-user-friends', description: 'O número de pessoas únicas que viram os seus anúncios. Mede o tamanho real da sua audiência.' },
+                frequencia: { title: 'Frequência', icon: 'fas fa-redo-alt', description: 'O número médio de vezes que cada pessoa viu o seu anúncio. Ajuda a evitar a fadiga do anúncio.' }
             };
 
             kpiGrid.innerHTML = `
                 ${createKpiCard(kpiInfo.gasto.title, formatCurrency(totals.gasto), kpiInfo.gasto.icon, kpiInfo.gasto.description, 0)}
                 ${createKpiCard(kpiInfo.cliques.title, formatInteger(totals.cliques), kpiInfo.cliques.icon, kpiInfo.cliques.description, 50)}
                 ${createKpiCard(kpiInfo.impressoes.title, formatInteger(totals.impressoes), kpiInfo.impressoes.icon, kpiInfo.impressoes.description, 100)}
-                ${createKpiCard(kpiInfo.cpc.title, formatCurrency(totals.cpc), kpiInfo.cpc.icon, kpiInfo.cpc.description, 150)}
-                ${createKpiCard(kpiInfo.cpm.title, formatCurrency(totals.cpm), kpiInfo.cpm.icon, kpiInfo.cpm.description, 200)}
-                ${createKpiCard(kpiInfo.ctr.title, `${formatDecimal(totals.ctr)}%`, kpiInfo.ctr.icon, kpiInfo.ctr.description, 250)}
+                ${createKpiCard(kpiInfo.clique_direto_wpp.title, formatInteger(totals.clique_direto_wpp), kpiInfo.clique_direto_wpp.icon, kpiInfo.clique_direto_wpp.description, 150)}
+                ${createKpiCard(kpiInfo.ctr.title, `${formatDecimal(totals.ctr)}%`, kpiInfo.ctr.icon, kpiInfo.ctr.description, 200)}
+                ${createKpiCard(kpiInfo.cpm.title, formatCurrency(totals.cpm), kpiInfo.cpm.icon, kpiInfo.cpm.description, 250)}
+                ${createKpiCard(kpiInfo.alcance.title, formatInteger(totals.alcance), kpiInfo.alcance.icon, kpiInfo.alcance.description, 300)}
+                ${createKpiCard(kpiInfo.frequencia.title, formatDecimal(totals.frequencia), kpiInfo.frequencia.icon, kpiInfo.frequencia.description, 350)}
             `;
         }
         
+        function getObjectiveInfo(objectiveKey) {
+            const objectives = {
+                'OUTCOME_ENGAGEMENT': { icon: 'fas fa-comments', color: 'blue', text: 'Engajamento', description: 'Otimizado para obter mais curtidas, comentários, compartilhamentos ou outras interações.' },
+                'OUTCOME_LEADS': { icon: 'fas fa-user-plus', color: 'green', text: 'Leads', description: 'Otimizado para capturar informações de contato de potenciais clientes.' },
+                'OUTCOME_SALES': { icon: 'fas fa-dollar-sign', color: 'yellow', text: 'Vendas', description: 'Otimizado para gerar vendas diretas no seu site ou app.' },
+                'OUTCOME_AWARENESS': { icon: 'fas fa-bullhorn', color: 'purple', text: 'Reconhecimento', description: 'Otimizado para alcançar o maior número de pessoas e aumentar a notoriedade da marca.' },
+                'OUTCOME_TRAFFIC': { icon: 'fas fa-mouse-pointer', color: 'indigo', text: 'Tráfego', description: 'Otimizado para levar pessoas para um destino, como o seu site.' },
+                'DEFAULT': { icon: 'fas fa-question-circle', color: 'slate', text: 'Não definido', description: 'O objetivo desta campanha não foi especificado ou não é reconhecido.' }
+            };
+            const colors = {
+                blue: 'bg-blue-100 text-blue-600',
+                green: 'bg-green-100 text-green-600',
+                yellow: 'bg-yellow-100 text-yellow-600',
+                purple: 'bg-purple-100 text-purple-600',
+                indigo: 'bg-indigo-100 text-indigo-600',
+                slate: 'bg-slate-100 text-slate-600'
+            };
+            const info = objectives[objectiveKey] || objectives['DEFAULT'];
+            return { ...info, colorClass: colors[info.color] };
+        }
+
         function renderCampaignsTable(campaignsData) {
             if (!campaignsData || campaignsData.length === 0) {
                 campaignsTableBody.innerHTML = '';
@@ -553,23 +582,39 @@
             const activeCampaignsInPeriod = campaignsData.filter(c => c.gasto > 0);
 
             if (activeCampaignsInPeriod.length === 0) {
-                campaignsTableBody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">Nenhuma campanha teve atividade no período selecionado.</td></tr>`;
+                campaignsTableBody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-slate-500">Nenhuma campanha teve atividade no período selecionado.</td></tr>`;
                 return;
             }
 
-            campaignsTableBody.innerHTML = activeCampaignsInPeriod.map(campaign => `
+            campaignsTableBody.innerHTML = activeCampaignsInPeriod.map(campaign => {
+                const objectiveInfo = getObjectiveInfo(campaign.objetivo);
+                return `
                 <tr class="campaign-row bg-white border-b hover:bg-slate-50 cursor-pointer transition-colors" data-campaign-id="${campaign.id}" data-campaign-name="${campaign.nome}">
-                    <th scope="row" class="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">${campaign.nome}</th>
+                    <th scope="row" class="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <div class="group relative">
+                                <span class="w-8 h-8 rounded-full flex items-center justify-center ${objectiveInfo.colorClass}">
+                                    <i class="${objectiveInfo.icon}"></i>
+                                </span>
+                                <!-- Tooltip -->
+                                <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-lg bg-emerald-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                    <strong>${objectiveInfo.text}</strong>: ${objectiveInfo.description}
+                                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-emerald-800"></div>
+                                </div>
+                            </div>
+                            <span>${campaign.nome}</span>
+                        </div>
+                    </th>
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 text-xs font-semibold rounded-full ${campaign.status_campanha === 'ATIVA' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}">${campaign.status_campanha}</span>
                     </td>
                     <td class="px-6 py-4 text-right">${formatCurrency(campaign.gasto)}</td>
                     <td class="px-6 py-4 text-right">${formatInteger(campaign.cliques)}</td>
-                    <td class="px-6 py-4 text-right">${formatCurrency(campaign.cpc)}</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(campaign.clique_direto_wpp)}</td>
                     <td class="px-6 py-4 text-right">${formatDecimal(campaign.ctr)}%</td>
                     <td class="px-6 py-4 text-right">${formatInteger(campaign.impressoes)}</td>
                 </tr>
-            `).join('');
+            `}).join('');
 
             document.querySelectorAll('.campaign-row').forEach(row => {
                 row.addEventListener('click', handleCampaignRowClick);
@@ -738,13 +783,14 @@
             const dailyHistoryMap = new Map();
             campaignHistory.forEach(item => {
                 const dateKey = new Date(item.data_relatorio).toISOString().split('T')[0];
+
                 if (!dailyHistoryMap.has(dateKey)) {
                     dailyHistoryMap.set(dateKey, { gasto: 0, cliques: 0, impressoes: 0 });
                 }
                 const dayData = dailyHistoryMap.get(dateKey);
-                dayData.gasto += item.gasto || 0;
-                dayData.cliques += item.cliques || 0;
-                dayData.impressoes += item.impressoes || 0;
+                dayData.gasto += Number(item.gasto) || 0;
+                dayData.cliques += Number(item.cliques) || 0;
+                dayData.impressoes += Number(item.impressoes) || 0;
             });
 
             const singleCampaignDailyHistory = Array.from(dailyHistoryMap.entries())
@@ -814,7 +860,7 @@
 
             let campaignsSummary = sortedCampaigns
                 .slice(0, 5)
-                .map(c => `- Campanha "${c.nome}": Gasto de ${formatCurrency(c.gasto)}, CTR de ${formatDecimal(c.ctr)}%, CPC de ${formatCurrency(c.cpc)}`)
+                .map(c => `- Campanha "${c.nome}": Gasto de ${formatCurrency(c.gasto)}, CTR de ${formatDecimal(c.ctr)}%, Mensagens WPP: ${formatInteger(c.clique_direto_wpp)}`)
                 .join('\n');
             
             if (sortedCampaigns.length === 0) {
@@ -829,9 +875,11 @@
                 - Investimento Total: ${formatCurrency(totals.gasto)}
                 - Cliques Totais: ${formatInteger(totals.cliques)}
                 - Impressões Totais: ${formatInteger(totals.impressoes)}
-                - Custo por Clique (CPC) Médio: ${formatCurrency(totals.cpc)}
+                - Mensagens WhatsApp: ${formatInteger(totals.clique_direto_wpp)}
                 - Custo por Mil Impressões (CPM) Médio: ${formatCurrency(totals.cpm)}
                 - Taxa de Cliques (CTR) Média: ${formatDecimal(totals.ctr)}%
+                - Alcance: ${formatInteger(totals.alcance)}
+                - Frequência: ${formatDecimal(totals.frequencia)}
 
                 **Resumo das Principais Campanhas Ativas no Período:**
                 ${campaignsSummary}
@@ -842,11 +890,11 @@
 
                 ### Destaques Positivos
                 - [Ponto positivo 1, ex: O CTR geral está bom, indicando anúncios relevantes.]
-                - [Ponto positivo 2, ex: A campanha X está com um CPC baixo.]
+                - [Ponto positivo 2, ex: A campanha X está com um Custo por Mensagem baixo.]
 
                 ### Pontos de Atenção
-                - [Ponto de atenção 1, ex: O CPC da campanha Y está acima da média.]
-                - [Ponto de atenção 2, ex: A campanha Z teve um gasto alto mas baixo CTR.]
+                - [Ponto de atenção 1, ex: A frequência da campanha Y está alta, podendo causar fadiga.]
+                - [Ponto de atenção 2, ex: A campanha Z teve um gasto alto mas poucas mensagens.]
 
                 ### Recomendação
                 - [Forneça uma recomendação clara e acionável com base nos pontos de atenção. Ex: Sugiro pausar a campanha Z e realocar o orçamento para a campanha X, que está a performar melhor.]
