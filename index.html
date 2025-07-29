@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Performance de Campanhas</title>
+    <title>Dashboard de Performance Avançado</title>
     
-    <!-- Tailwind CSS para estilização rápida e responsiva -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Chart.js para gráficos interativos -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns/"></script>
     
-    <!-- Font Awesome para ícones -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <!-- Supabase JS Client -->
@@ -97,28 +97,44 @@
             margin-right: 0.75rem;
             margin-top: 0.125rem;
         }
+
+        /* Estilos para as abas de plataforma */
+        .platform-tab {
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            color: #475569; /* slate-600 */
+            font-weight: 600;
+        }
+        .platform-tab.active {
+            color: #059669; /* emerald-600 */
+            border-bottom-color: #059669;
+        }
+        .platform-tab:hover {
+            background-color: #f8fafc; /* slate-50 */
+        }
     </style>
 </head>
 <body class="text-slate-800">
 
     <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto">
         <!-- Cabeçalho da Aplicação -->
-        <header class="mb-8">
+        <header class="mb-6">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                 <!-- Título e Subtítulo -->
                 <div class="w-full md:w-1/4">
                     <h1 class="text-3xl font-extrabold text-slate-900 whitespace-nowrap">Dashboard</h1>
                     <p class="text-slate-500 mt-1 whitespace-nowrap">Performance de Campanhas</p>
                 </div>
-                <!-- Pesquisa Central -->
+                <!-- Seletor de Empresa -->
                 <div class="w-full md:w-1/2 relative">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-slate-400"></i>
+                        <i class="fas fa-building text-slate-400"></i>
                     </div>
-                    <input type="search" id="client-search-input" class="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-full bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all" placeholder="Pesquisar empresa...">
-                    <div id="search-results-container" class="hidden absolute mt-2 w-full rounded-lg bg-white shadow-xl border z-20 max-h-60 overflow-y-auto">
-                        <!-- Resultados da pesquisa aqui -->
-                    </div>
+                    <select id="client-select" class="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-full bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all appearance-none">
+                        <option value="">Selecione uma empresa...</option>
+                    </select>
                 </div>
                 <!-- Saldo e Ações -->
                 <div class="w-full md:w-1/4 flex items-center justify-end gap-3">
@@ -139,7 +155,7 @@
                     <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="month">Mês Atual</button>
                     <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="all">Todo o Período</button>
                 </div>
-                 <!-- Botão de Análise com IA -->
+                <!-- Botão de Análise com IA -->
                 <button id="gemini-analysis-button" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-2.5 px-5 rounded-full flex items-center justify-center gap-2 shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-wait">
                     <i class="fas fa-wand-magic-sparkles"></i>
                     <span>Gerar Análise com IA</span>
@@ -147,61 +163,143 @@
             </div>
         </header>
 
+        <!-- Abas de Navegação de Plataforma -->
+        <div class="border-b border-slate-200 mb-8">
+            <nav id="platform-tabs" class="flex -mb-px">
+                <div class="platform-tab active" data-platform="meta">
+                    <i class="fab fa-meta mr-2"></i> Meta Ads
+                </div>
+                <div class="platform-tab" data-platform="google">
+                    <i class="fab fa-google mr-2"></i> Google Ads
+                </div>
+            </nav>
+        </div>
+
         <!-- Container de Carregamento Principal -->
         <div id="loading-container" class="hidden items-center justify-center p-16 flex-col gap-4 text-center">
             <div class="loader"></div>
             <p class="text-slate-600 font-semibold text-lg">A buscar dados no Supabase...</p>
         </div>
+        
+        <!-- Mensagem de Selecione um Cliente -->
+        <div id="select-client-message" class="flex items-center justify-center p-16 flex-col gap-4 text-center text-slate-500">
+             <i class="fas fa-building-user fa-3x mb-4"></i>
+             <h2 class="text-2xl font-bold">Nenhuma empresa selecionada</h2>
+             <p>Por favor, selecione uma empresa no menu acima para começar.</p>
+        </div>
 
-        <!-- Conteúdo do Dashboard -->
-        <main id="dashboard-content" class="hidden">
-            <!-- Seção de KPIs (Indicadores Chave de Performance) -->
-            <section id="kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 mb-8">
-                <!-- Os cards de KPI serão inseridos aqui pelo JavaScript -->
-            </section>
+        <!-- Conteúdo do Dashboard (META) -->
+        <main id="meta-dashboard-content" class="hidden">
+            <!-- [CORREÇÃO] Wrapper para o conteúdo principal do Meta -->
+            <div id="meta-main-content">
+                <!-- Seção de KPIs (Indicadores Chave de Performance) -->
+                <section id="meta-kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 mb-8">
+                    <!-- Os cards de KPI do Meta serão inseridos aqui -->
+                </section>
 
-            <!-- Seção de Tabela e Gráfico (Layout Vertical) -->
-            <div class="flex flex-col gap-8">
-                <!-- Tabela de Campanhas -->
-                <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
-                    <h2 id="table-title" class="text-xl font-bold mb-4 text-slate-900">Detalhes das Campanhas</h2>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left text-slate-600">
-                            <thead class="text-xs text-slate-700 uppercase bg-slate-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-4 rounded-l-lg">Campanha</th>
-                                    <th scope="col" class="px-6 py-4">Status</th>
-                                    <th scope="col" class="px-6 py-4 text-right">Gasto</th>
-                                    <th scope="col" class="px-6 py-4 text-right">Cliques</th>
-                                    <th scope="col" class="px-6 py-4 text-right">Msgs. WPP</th>
-                                    <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
-                                    <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
-                                </tr>
-                            </thead>
-                            <tbody id="campaigns-table-body">
-                                <!-- As linhas da tabela serão inseridas aqui -->
-                            </tbody>
-                        </table>
-                        <div id="no-campaigns-message" class="hidden text-center p-8 text-slate-500">
-                            <i class="fas fa-folder-open fa-2x mb-2"></i>
-                            <p>Nenhuma campanha encontrada para este cliente.</p>
+                <!-- Seção de Tabela e Gráfico (Layout Vertical) -->
+                <div class="flex flex-col gap-8">
+                    <!-- Tabela de Campanhas -->
+                    <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                        <h2 id="meta-table-title" class="text-xl font-bold mb-4 text-slate-900">Detalhes das Campanhas (Meta)</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-slate-600">
+                                <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-4 rounded-l-lg">Campanha</th>
+                                        <th scope="col" class="px-6 py-4">Status</th>
+                                        <th scope="col" class="px-6 py-4 text-right">Gasto</th>
+                                        <th scope="col" class="px-6 py-4 text-right">Cliques</th>
+                                        <th scope="col" class="px-6 py-4 text-right">Msgs. WPP</th>
+                                        <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
+                                        <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="meta-campaigns-table-body"></tbody>
+                            </table>
+                            <div id="meta-no-campaigns-message" class="hidden text-center p-8 text-slate-500">
+                                <!-- Mensagem de "sem atividade" será inserida aqui -->
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Gráfico de Histórico -->
-                <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
-                    <h2 id="chart-title" class="text-xl font-bold mb-4 text-slate-900">Performance Diária do Cliente</h2>
-                    <div id="chart-container" class="relative h-96">
-                         <canvas id="performance-chart"></canvas>
-                         <div id="no-chart-data-message" class="hidden absolute inset-0 flex items-center justify-center text-center text-slate-500">
-                            <i class="fas fa-chart-line fa-2x mb-2"></i>
-                            <p>Sem dados históricos para o período selecionado.</p>
+                    <!-- Gráfico de Histórico -->
+                    <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                        <h2 id="meta-chart-title" class="text-xl font-bold mb-4 text-slate-900">Performance Diária do Cliente (Meta)</h2>
+                        <div class="relative h-96">
+                             <canvas id="meta-performance-chart"></canvas>
+                             <div id="meta-no-chart-data-message" class="hidden absolute inset-0 flex items-center justify-center text-center text-slate-500">
+                                 <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                 <p>Sem dados históricos do Meta para o período selecionado.</p>
+                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <!-- [CORREÇÃO] Container para a mensagem de "sem dados na plataforma" -->
+            <div id="meta-no-data-container" class="hidden text-center p-16 text-slate-500 bg-white rounded-xl shadow-lg">
+                <i class="fab fa-meta fa-3x mb-4 text-slate-400"></i>
+                <h2 class="text-2xl font-bold">Sem dados de Meta</h2>
+                <p>Este cliente não possui uma conta do Meta Ads cadastrada.</p>
+            </div>
         </main>
+
+        <!-- Conteúdo do Dashboard (GOOGLE) -->
+        <main id="google-dashboard-content" class="hidden">
+            <!-- [CORREÇÃO] Wrapper para o conteúdo principal do Google -->
+            <div id="google-main-content">
+                <!-- Seção de KPIs (Indicadores Chave de Performance) -->
+                <section id="google-kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 mb-8">
+                    <!-- Os cards de KPI do Google serão inseridos aqui -->
+                </section>
+
+                <!-- Seção de Tabela e Gráfico (Layout Vertical) -->
+                <div class="flex flex-col gap-8">
+                    <!-- Tabela de Campanhas -->
+                    <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                        <h2 id="google-table-title" class="text-xl font-bold mb-4 text-slate-900">Detalhes das Campanhas (Google)</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-slate-600">
+                                <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-4 rounded-l-lg">Campanha</th>
+                                        <th scope="col" class="px-6 py-4">Status</th>
+                                        <th scope="col" class="px-6 py-4 text-right">Custo</th>
+                                        <th scope="col" class="px-6 py-4 text-right">Conversões</th>
+                                        <th scope="col" class="px-6 py-4 text-right">Cliques</th>
+                                        <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
+                                        <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="google-campaigns-table-body"></tbody>
+                            </table>
+                            <div id="google-no-campaigns-message" class="hidden text-center p-8 text-slate-500">
+                                <!-- Mensagem de "sem atividade" será inserida aqui -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico de Histórico -->
+                    <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                        <h2 id="google-chart-title" class="text-xl font-bold mb-4 text-slate-900">Performance Diária do Cliente (Google)</h2>
+                        <div class="relative h-96">
+                             <canvas id="google-performance-chart"></canvas>
+                             <div id="google-no-chart-data-message" class="hidden absolute inset-0 flex items-center justify-center text-center text-slate-500">
+                                 <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                 <p>Sem dados históricos do Google para o período selecionado.</p>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [CORREÇÃO] Container para a mensagem de "sem dados na plataforma" -->
+            <div id="google-no-data-container" class="hidden text-center p-16 text-slate-500 bg-white rounded-xl shadow-lg">
+                <i class="fab fa-google fa-3x mb-4 text-slate-400"></i>
+                <h2 class="text-2xl font-bold">Sem dados de Google</h2>
+                <p>Este cliente não possui uma conta do Google Ads cadastrada.</p>
+            </div>
+        </main>
+
     </div>
     
     <!-- Modal de Análise da IA -->
@@ -209,8 +307,8 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
             <header class="p-4 border-b flex justify-between items-center">
                  <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-wand-magic-sparkles text-emerald-600"></i>
-                    Análise de Performance (IA)
+                     <i class="fas fa-wand-magic-sparkles text-emerald-600"></i>
+                     Análise de Performance (IA)
                  </h3>
                  <button id="close-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </header>
@@ -240,19 +338,38 @@
 
         // --- 2. ELEMENTOS DO DOM ---
 
-        const clientSearchInput = document.getElementById('client-search-input');
-        const searchResultsContainer = document.getElementById('search-results-container');
+        const clientSelect = document.getElementById('client-select');
         const refreshButton = document.getElementById('refresh-button');
         const dateFiltersContainer = document.getElementById('date-filters');
         const loadingContainer = document.getElementById('loading-container');
-        const dashboardContent = document.getElementById('dashboard-content');
-        const kpiGrid = document.getElementById('kpi-grid');
-        const tableTitle = document.getElementById('table-title');
-        const campaignsTableBody = document.getElementById('campaigns-table-body');
-        const noCampaignsMessage = document.getElementById('no-campaigns-message');
-        const chartTitle = document.getElementById('chart-title');
-        const performanceChartCanvas = document.getElementById('performance-chart');
-        const noChartDataMessage = document.getElementById('no-chart-data-message');
+        const selectClientMessage = document.getElementById('select-client-message');
+        const platformTabs = document.getElementById('platform-tabs');
+        
+        // Elementos do Meta
+        const metaDashboardContent = document.getElementById('meta-dashboard-content');
+        const metaMainContent = document.getElementById('meta-main-content'); // CORREÇÃO
+        const metaNoDataContainer = document.getElementById('meta-no-data-container'); // CORREÇÃO
+        const metaKpiGrid = document.getElementById('meta-kpi-grid');
+        const metaTableTitle = document.getElementById('meta-table-title');
+        const metaCampaignsTableBody = document.getElementById('meta-campaigns-table-body');
+        const metaNoCampaignsMessage = document.getElementById('meta-no-campaigns-message');
+        const metaChartTitle = document.getElementById('meta-chart-title');
+        const metaPerformanceChartCanvas = document.getElementById('meta-performance-chart');
+        const metaNoChartDataMessage = document.getElementById('meta-no-chart-data-message');
+
+        // Elementos do Google
+        const googleDashboardContent = document.getElementById('google-dashboard-content');
+        const googleMainContent = document.getElementById('google-main-content'); // CORREÇÃO
+        const googleNoDataContainer = document.getElementById('google-no-data-container'); // CORREÇÃO
+        const googleKpiGrid = document.getElementById('google-kpi-grid');
+        const googleTableTitle = document.getElementById('google-table-title');
+        const googleCampaignsTableBody = document.getElementById('google-campaigns-table-body');
+        const googleNoCampaignsMessage = document.getElementById('google-no-campaigns-message');
+        const googleChartTitle = document.getElementById('google-chart-title');
+        const googlePerformanceChartCanvas = document.getElementById('google-performance-chart');
+        const googleNoChartDataMessage = document.getElementById('google-no-chart-data-message');
+
+        // Elementos do Modal e IA
         const geminiAnalysisButton = document.getElementById('gemini-analysis-button');
         const analysisModal = document.getElementById('analysis-modal');
         const analysisModalContent = document.getElementById('analysis-modal-content');
@@ -262,14 +379,18 @@
         const clientBalanceContainer = document.getElementById('client-balance-container');
 
 
-        let performanceChart = null; 
+        // --- 3. ESTADO DA APLICAÇÃO ---
+
+        let metaPerformanceChart = null; 
+        let googlePerformanceChart = null; 
         let lastAggregatedData = null; // Armazena os últimos dados processados para a IA
         let clientFullHistory = []; // Armazena todo o histórico do cliente para o período
         let currentChartCampaignId = null; // Armazena o ID da campanha selecionada para o gráfico
-        let allClients = []; // Armazena todos os clientes e seus saldos
-        let selectedClientId = null; // Armazena o ID do cliente selecionado
+        let allClients = []; // Armazena todos os clientes (Meta e Google)
+        let selectedClient = null; // Armazena o objeto do cliente selecionado
+        let currentPlatform = 'meta'; // 'meta' ou 'google'
 
-        // --- 3. FUNÇÕES DE FORMATAÇÃO E UTILIDADE ---
+        // --- 4. FUNÇÕES DE FORMATAÇÃO E UTILIDADE ---
 
         const formatCurrency = (value) => (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const formatDecimal = (value) => (value || 0).toFixed(2);
@@ -292,159 +413,226 @@
             </div>
         `;
 
-        // --- 4. LÓGICA DE DADOS (FETCH E PROCESSAMENTO) ---
+        // --- 5. LÓGICA DE DADOS (FETCH E PROCESSAMENTO) ---
 
         /**
-         * Busca todos os clientes da tabela 'trafego_clientes', incluindo o saldo.
+         * Busca clientes de ambas as tabelas (Meta e Google), unifica a lista e popula o dropdown.
          */
-        async function fetchClients() {
-            const { data, error } = await dbClient
-                .from('trafego_clientes')
-                .select('id, nome, saldo')
-                .order('nome', { ascending: true });
+        async function fetchAllClients() {
+            try {
+                const [metaClientsResponse, googleClientsResponse] = await Promise.all([
+                    dbClient.from('trafego_clientes').select('id, nome, saldo'),
+                    dbClient.from('trafego_clientes_google').select('id, nome')
+                ]);
 
-            if (error) {
-                console.error('Erro ao buscar clientes:', error);
-                clientSearchInput.placeholder = 'Erro ao carregar clientes';
+                if (metaClientsResponse.error) throw metaClientsResponse.error;
+                if (googleClientsResponse.error) throw googleClientsResponse.error;
+
+                const clientMap = new Map();
+
+                // Processa clientes do Meta
+                metaClientsResponse.data.forEach(client => {
+                    if (!clientMap.has(client.nome)) {
+                        clientMap.set(client.nome, { name: client.nome, metaId: client.id, googleId: null, saldo: client.saldo });
+                    } else {
+                        const existing = clientMap.get(client.nome);
+                        existing.metaId = client.id;
+                        existing.saldo = client.saldo;
+                    }
+                });
+
+                // Processa clientes do Google
+                googleClientsResponse.data.forEach(client => {
+                    if (!clientMap.has(client.nome)) {
+                        clientMap.set(client.nome, { name: client.nome, metaId: null, googleId: client.id, saldo: null });
+                    } else {
+                        clientMap.get(client.nome).googleId = client.id;
+                    }
+                });
+
+                allClients = Array.from(clientMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+                populateClientDropdown();
+
+            } catch (error) {
+                console.error('Erro ao buscar clientes unificados:', error);
+                clientSelect.innerHTML = '<option>Erro ao carregar empresas</option>';
+            }
+        }
+
+        /**
+         * Popula o menu dropdown com a lista de clientes unificada.
+         */
+        function populateClientDropdown() {
+            clientSelect.innerHTML = '<option value="">Selecione uma empresa...</option>';
+            allClients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.name; // Usamos o nome como identificador único no dropdown
+                option.textContent = client.name;
+                clientSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Função principal que direciona a atualização do dashboard para a plataforma correta.
+         */
+        async function updateDashboard() {
+            if (!selectedClient) {
+                showInitialMessage();
                 return;
             }
             
-            allClients = data; // Armazena os dados completos dos clientes
-            
-            if (data.length > 0) {
-                // Seleciona o primeiro cliente por defeito
-                selectClient(data[0]);
-            }
-        }
-
-        /**
-         * Função principal que atualiza todo o dashboard com base nos filtros selecionados.
-         */
-        async function updateDashboard() {
-            const clientId = selectedClientId;
-            const activeFilter = dateFiltersContainer.querySelector('.active');
-            const period = activeFilter.dataset.period;
-
-            if (!clientId) return;
-
-            loadingContainer.classList.remove('hidden');
-            loadingContainer.classList.add('flex');
-            dashboardContent.classList.add('hidden');
-            geminiAnalysisButton.disabled = true;
-            currentChartCampaignId = null; // Reseta o filtro do gráfico
-            
-            renderClientBalance(clientId); // Renderiza o saldo do cliente selecionado
+            showLoading(true);
+            renderClientBalance();
 
             try {
-                // 1. Busca as campanhas do cliente
-                const { data: campaigns, error: campaignsError } = await dbClient
-                    .from('trafego_campanhas')
-                    .select('id, nome, status_campanha, objetivo')
-                    .eq('cliente_id', clientId);
-
-                if (campaignsError) throw campaignsError;
-
-                if (campaigns.length === 0) {
-                    renderKpiCards({});
-                    renderCampaignsTable([]);
-                    noCampaignsMessage.classList.remove('hidden');
-                    if (performanceChart) performanceChart.destroy();
-                    noChartDataMessage.classList.remove('hidden');
-                    lastAggregatedData = null;
-                    return;
+                if (currentPlatform === 'meta') {
+                    if (selectedClient.metaId) {
+                        await fetchAndProcessMetaData();
+                    } else {
+                        showNoDataForPlatform('Meta');
+                    }
+                } else if (currentPlatform === 'google') {
+                    if (selectedClient.googleId) {
+                        await fetchAndProcessGoogleData();
+                    } else {
+                        showNoDataForPlatform('Google');
+                    }
                 }
-                
-                noCampaignsMessage.classList.add('hidden');
-                const campaignIds = campaigns.map(c => c.id);
-
-                // 2. Busca TODO o histórico do cliente para determinar a data mais recente
-                const { data: allHistory, error: allHistoryError } = await dbClient
-                    .from('trafego_historico')
-                    .select('data_relatorio, gasto, cliques, impressoes, campanha_id, clique_direto_wpp, alcance, frequencia')
-                    .in('campanha_id', campaignIds);
-
-                if (allHistoryError) throw allHistoryError;
-
-                if (allHistory.length === 0) {
-                    renderKpiCards({});
-                    renderCampaignsTable([]);
-                    if (performanceChart) performanceChart.destroy();
-                    noChartDataMessage.classList.remove('hidden');
-                    lastAggregatedData = null;
-                    return;
-                }
-
-                // 3. Encontra a data mais recente nos dados
-                const latestDateStr = allHistory.reduce((max, h) => h.data_relatorio > max ? h.data_relatorio : max, allHistory[0].data_relatorio);
-
-                // 4. Calcula o intervalo de datas com base na data mais recente
-                const { startDate, endDate } = getDateRange(period, latestDateStr);
-                tableTitle.textContent = `Detalhes das Campanhas (${activeFilter.textContent})`;
-
-                // 5. Filtra o histórico em memória com base no intervalo de datas correto
-                const filteredHistory = allHistory.filter(h => {
-                    if (period === 'all') return true;
-                    const hDate = new Date(h.data_relatorio);
-                    return hDate >= startDate && hDate <= endDate;
-                });
-                clientFullHistory = filteredHistory; // Armazena o histórico filtrado para uso posterior
-                
-                // 6. Processa e agrega os dados JÁ FILTRADOS
-                const aggregatedData = processAllData(campaigns, filteredHistory);
-                lastAggregatedData = aggregatedData;
-                
-                // 7. Renderiza os componentes do dashboard
-                renderKpiCards(aggregatedData.totals);
-                renderCampaignsTable(aggregatedData.campaignsWithMetrics);
-                renderPerformanceChart(aggregatedData.dailyHistory, startDate, endDate);
-                chartTitle.textContent = 'Performance Diária do Cliente'; // Reseta o título do gráfico
-
             } catch (error) {
-                console.error('Erro ao carregar dados do dashboard:', error);
-                dashboardContent.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg"><b>Erro:</b> Não foi possível carregar os dados. Verifique o console.</div>`;
+                console.error(`Erro ao carregar dados para ${currentPlatform}:`, error);
+                const contentDiv = currentPlatform === 'meta' ? metaDashboardContent : googleDashboardContent;
+                contentDiv.innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-lg"><b>Erro:</b> Não foi possível carregar os dados. Verifique o console.</div>`;
                 lastAggregatedData = null;
             } finally {
-                loadingContainer.classList.add('hidden');
-                loadingContainer.classList.remove('flex');
-                dashboardContent.classList.remove('hidden');
-                geminiAnalysisButton.disabled = !lastAggregatedData || lastAggregatedData.totals.gasto === 0;
+                showLoading(false);
             }
         }
 
         /**
+         * Busca e processa todos os dados relacionados ao Meta Ads.
+         */
+        async function fetchAndProcessMetaData() {
+            // [CORREÇÃO] Garante que a área de conteúdo principal esteja visível e a de "sem dados" oculta.
+            metaMainContent.classList.remove('hidden');
+            metaNoDataContainer.classList.add('hidden');
+
+            const clientId = selectedClient.metaId;
+            const activeFilter = dateFiltersContainer.querySelector('.active');
+            const period = activeFilter.dataset.period;
+            currentChartCampaignId = null;
+
+            const { data: campaigns, error: campaignsError } = await dbClient
+                .from('trafego_campanhas')
+                .select('id, nome, status_campanha, objetivo')
+                .eq('cliente_id', clientId);
+            if (campaignsError) throw campaignsError;
+
+            const { data: allHistory, error: allHistoryError } = await dbClient
+                .from('trafego_historico')
+                .select('data_relatorio, gasto, cliques, impressoes, campanha_id, clique_direto_wpp, alcance, frequencia')
+                .in('campanha_id', campaigns.map(c => c.id));
+            if (allHistoryError) throw allHistoryError;
+
+            // [CORREÇÃO] Lida com o caso de não haver atividade no período.
+            if (campaigns.length === 0 || allHistory.length === 0) {
+                showNoActivityForPlatform('meta');
+                return;
+            }
+
+            const latestDateStr = allHistory.reduce((max, h) => h.data_relatorio > max ? h.data_relatorio : max, allHistory[0].data_relatorio);
+            const { startDate, endDate } = getDateRange(period, latestDateStr);
+            metaTableTitle.textContent = `Detalhes das Campanhas (${activeFilter.textContent})`;
+
+            const filteredHistory = allHistory.filter(h => {
+                if (period === 'all') return true;
+                const hDate = new Date(h.data_relatorio);
+                return hDate >= startDate && hDate <= endDate;
+            });
+            clientFullHistory = filteredHistory;
+            
+            const aggregatedData = processMetaData(campaigns, filteredHistory);
+            lastAggregatedData = { ...aggregatedData, platform: 'meta' };
+            
+            renderMetaKpiCards(aggregatedData.totals);
+            renderMetaCampaignsTable(aggregatedData.campaignsWithMetrics);
+            renderMetaPerformanceChart(aggregatedData.dailyHistory, startDate, endDate);
+            metaChartTitle.textContent = 'Performance Diária do Cliente (Meta)';
+            geminiAnalysisButton.disabled = !lastAggregatedData || lastAggregatedData.totals.gasto === 0;
+        }
+
+        /**
+         * Busca e processa todos os dados relacionados ao Google Ads.
+         */
+        async function fetchAndProcessGoogleData() {
+            // [CORREÇÃO] Garante que a área de conteúdo principal esteja visível e a de "sem dados" oculta.
+            googleMainContent.classList.remove('hidden');
+            googleNoDataContainer.classList.add('hidden');
+
+            const clientId = selectedClient.googleId;
+            const activeFilter = dateFiltersContainer.querySelector('.active');
+            const period = activeFilter.dataset.period;
+            currentChartCampaignId = null;
+
+            const { data: campaigns, error: campaignsError } = await dbClient
+                .from('trafego_campanhas_google')
+                .select('id, nome_campanha, status')
+                .eq('id_cliente', clientId);
+            if (campaignsError) throw campaignsError;
+
+            const { data: allHistory, error: allHistoryError } = await dbClient
+                .from('trafego_historico_google')
+                .select('data_relatorio, cost, conversions, clicks, impressions, id_campanha')
+                .in('id_campanha', campaigns.map(c => c.id));
+            if (allHistoryError) throw allHistoryError;
+
+            // [CORREÇÃO] Lida com o caso de não haver atividade no período.
+            if (campaigns.length === 0 || allHistory.length === 0) {
+                showNoActivityForPlatform('google');
+                return;
+            }
+
+            const latestDateStr = allHistory.reduce((max, h) => h.data_relatorio > max ? h.data_relatorio : max, allHistory[0].data_relatorio);
+            const { startDate, endDate } = getDateRange(period, latestDateStr);
+            googleTableTitle.textContent = `Detalhes das Campanhas (${activeFilter.textContent})`;
+
+            const filteredHistory = allHistory.filter(h => {
+                if (period === 'all') return true;
+                const hDate = new Date(h.data_relatorio);
+                return hDate >= startDate && hDate <= endDate;
+            });
+            clientFullHistory = filteredHistory;
+
+            const aggregatedData = processGoogleData(campaigns, filteredHistory);
+            lastAggregatedData = { ...aggregatedData, platform: 'google' };
+
+            renderGoogleKpiCards(aggregatedData.totals);
+            renderGoogleCampaignsTable(aggregatedData.campaignsWithMetrics);
+            renderGooglePerformanceChart(aggregatedData.dailyHistory, startDate, endDate);
+            googleChartTitle.textContent = 'Performance Diária do Cliente (Google)';
+            geminiAnalysisButton.disabled = !lastAggregatedData || lastAggregatedData.totals.cost === 0;
+        }
+        
+        /**
          * Calcula o intervalo de datas com base no período e na data mais recente dos dados.
-         * @param {string} period - O período ('today', '7', '30', 'month', 'all').
-         * @param {string} latestDateStr - A string da data mais recente dos dados.
-         * @returns {Object} - Um objeto com startDate e endDate.
          */
         function getDateRange(period, latestDateStr) {
             const referenceDate = latestDateStr ? new Date(latestDateStr) : new Date();
-            
             const endDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate(), 23, 59, 59, 999));
-            
             let startDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate()));
 
-            if (period === 'today') {
-                // startDate já é o início do dia de referência
-            } else if (period === '7') {
-                startDate.setUTCDate(startDate.getUTCDate() - 6);
-            } else if (period === '30') {
-                startDate.setUTCDate(startDate.getUTCDate() - 29);
-            } else if (period === 'month') {
-                startDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), 1));
-            } else if (period === 'all') {
-                return { startDate: null, endDate: null };
-            }
+            if (period === 'today') { /* já é o dia de referência */ } 
+            else if (period === '7') { startDate.setUTCDate(startDate.getUTCDate() - 6); } 
+            else if (period === '30') { startDate.setUTCDate(startDate.getUTCDate() - 29); } 
+            else if (period === 'month') { startDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), 1)); } 
+            else if (period === 'all') { return { startDate: null, endDate: null }; }
+            
             return { startDate, endDate };
         }
 
         /**
-         * Processa os dados brutos para agregar totais e agrupar por dia.
-         * @param {Array} campaigns - Array de objetos de campanha.
-         * @param {Array} history - Array de objetos de histórico diário (já filtrado por data).
-         * @returns {Object} - Um objeto com totais, campanhas com métricas e histórico diário agregado.
+         * Processa os dados brutos do META para agregar totais e agrupar por dia.
          */
-        function processAllData(campaigns, history) {
+        function processMetaData(campaigns, history) {
             const campaignsWithMetrics = campaigns.map(campaign => {
                 const campaignHistory = history.filter(h => h.campanha_id === campaign.id);
                 const metrics = campaignHistory.reduce((acc, curr) => {
@@ -455,9 +643,7 @@
                     acc.alcance += Number(curr.alcance) || 0;
                     return acc;
                 }, { gasto: 0, cliques: 0, impressoes: 0, clique_direto_wpp: 0, alcance: 0 });
-
                 metrics.ctr = metrics.impressoes > 0 ? (metrics.cliques / metrics.impressoes) * 100 : 0;
-                
                 return { ...campaign, ...metrics };
             });
 
@@ -474,72 +660,176 @@
             totals.ctr = totals.impressoes > 0 ? (totals.cliques / totals.impressoes) * 100 : 0;
             totals.frequencia = totals.alcance > 0 ? totals.impressoes / totals.alcance : 0;
 
+            const dailyHistory = aggregateDailyHistory(history, ['gasto', 'cliques', 'impressoes']);
+            return { totals, campaignsWithMetrics, dailyHistory };
+        }
+
+        /**
+         * Processa os dados brutos do GOOGLE para agregar totais e agrupar por dia.
+         */
+        function processGoogleData(campaigns, history) {
+            const campaignsWithMetrics = campaigns.map(campaign => {
+                const campaignHistory = history.filter(h => h.id_campanha === campaign.id);
+                const metrics = campaignHistory.reduce((acc, curr) => {
+                    acc.cost += Number(curr.cost) || 0;
+                    acc.clicks += Number(curr.clicks) || 0;
+                    acc.impressions += Number(curr.impressions) || 0;
+                    acc.conversions += Number(curr.conversions) || 0;
+                    return acc;
+                }, { cost: 0, clicks: 0, impressions: 0, conversions: 0 });
+                metrics.ctr = metrics.impressions > 0 ? (metrics.clicks / metrics.impressions) * 100 : 0;
+                return { ...campaign, ...metrics };
+            });
+
+            const totals = campaignsWithMetrics.reduce((acc, curr) => {
+                acc.cost += curr.cost;
+                acc.clicks += curr.clicks;
+                acc.impressions += curr.impressions;
+                acc.conversions += curr.conversions;
+                return acc;
+            }, { cost: 0, clicks: 0, impressions: 0, conversions: 0 });
+
+            totals.cpc = totals.clicks > 0 ? totals.cost / totals.clicks : 0;
+            totals.ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
+            totals.cpa = totals.conversions > 0 ? totals.cost / totals.conversions : 0;
+
+            const dailyHistory = aggregateDailyHistory(history, [
+                { key: 'cost', transform: v => Number(v.cost) || 0 },
+                { key: 'conversions', transform: v => Number(v.conversions) || 0 },
+                { key: 'clicks', transform: v => Number(v.clicks) || 0 }
+            ]);
+            return { totals, campaignsWithMetrics, dailyHistory };
+        }
+
+        /**
+         * Função genérica para agregar dados diários.
+         */
+        function aggregateDailyHistory(history, metricsToSum) {
             const dailyHistoryMap = new Map();
             history.forEach(item => {
                 const dateKey = new Date(item.data_relatorio).toISOString().split('T')[0];
                 
                 if (!dailyHistoryMap.has(dateKey)) {
-                    dailyHistoryMap.set(dateKey, { gasto: 0, cliques: 0, impressoes: 0 });
+                    const initialMetrics = {};
+                    metricsToSum.forEach(metric => {
+                        const key = typeof metric === 'string' ? metric : metric.key;
+                        initialMetrics[key] = 0;
+                    });
+                    dailyHistoryMap.set(dateKey, initialMetrics);
                 }
+                
                 const dayData = dailyHistoryMap.get(dateKey);
-                dayData.gasto += Number(item.gasto) || 0;
-                dayData.cliques += Number(item.cliques) || 0;
-                dayData.impressoes += Number(item.impressoes) || 0;
+                metricsToSum.forEach(metric => {
+                    if (typeof metric === 'string') {
+                        dayData[metric] += Number(item[metric]) || 0;
+                    } else {
+                        dayData[metric.key] += metric.transform(item);
+                    }
+                });
             });
 
-            const dailyHistory = Array.from(dailyHistoryMap.entries())
+            return Array.from(dailyHistoryMap.entries())
                 .map(([date, metrics]) => ({ date, ...metrics }))
                 .sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
 
-            return { totals, campaignsWithMetrics, dailyHistory };
+        // --- 6. FUNÇÕES DE RENDERIZAÇÃO E VISIBILIDADE ---
+
+        function showLoading(isLoading) {
+            if (isLoading) {
+                loadingContainer.classList.remove('hidden');
+                loadingContainer.classList.add('flex');
+                metaDashboardContent.classList.add('hidden');
+                googleDashboardContent.classList.add('hidden');
+                selectClientMessage.classList.add('hidden');
+            } else {
+                loadingContainer.classList.add('hidden');
+                loadingContainer.classList.remove('flex');
+                const contentToShow = currentPlatform === 'meta' ? metaDashboardContent : googleDashboardContent;
+                contentToShow.classList.remove('hidden');
+            }
+            geminiAnalysisButton.disabled = true;
+        }
+
+        function showInitialMessage() {
+            selectClientMessage.classList.remove('hidden');
+            metaDashboardContent.classList.add('hidden');
+            googleDashboardContent.classList.add('hidden');
+            loadingContainer.classList.add('hidden');
+            geminiAnalysisButton.disabled = true;
+            clientBalanceContainer.innerHTML = '';
+        }
+
+        // [CORREÇÃO] Função não-destrutiva para quando o cliente não tem dados na plataforma.
+        function showNoDataForPlatform(platformName) {
+            if (platformName === 'Meta') {
+                metaMainContent.classList.add('hidden');
+                metaNoDataContainer.classList.remove('hidden');
+            } else { // Google
+                googleMainContent.classList.add('hidden');
+                googleNoDataContainer.classList.remove('hidden');
+            }
+            lastAggregatedData = null;
+            geminiAnalysisButton.disabled = true;
+        }
+
+        // [NOVA FUNÇÃO] Para lidar com a ausência de atividade no período.
+        function showNoActivityForPlatform(platform) {
+            if (platform === 'meta') {
+                metaKpiGrid.innerHTML = '';
+                metaCampaignsTableBody.innerHTML = '';
+                metaNoCampaignsMessage.innerHTML = `<div class="text-center p-8 text-slate-500"><i class="fas fa-folder-open fa-2x mb-2"></i><p>Nenhuma campanha ou atividade do Meta encontrada para este cliente no período.</p></div>`;
+                metaNoCampaignsMessage.classList.remove('hidden');
+                if (metaPerformanceChart) metaPerformanceChart.destroy();
+                metaNoChartDataMessage.classList.remove('hidden');
+            } else { // google
+                googleKpiGrid.innerHTML = '';
+                googleCampaignsTableBody.innerHTML = '';
+                googleNoCampaignsMessage.innerHTML = `<div class="text-center p-8 text-slate-500"><i class="fas fa-folder-open fa-2x mb-2"></i><p>Nenhuma campanha ou atividade do Google encontrada para este cliente no período.</p></div>`;
+                googleNoCampaignsMessage.classList.remove('hidden');
+                if (googlePerformanceChart) googlePerformanceChart.destroy();
+                googleNoChartDataMessage.classList.remove('hidden');
+            }
+            lastAggregatedData = null;
+            geminiAnalysisButton.disabled = true;
         }
 
 
-        // --- 5. FUNÇÕES DE RENDERIZAÇÃO ---
-
-        /**
-         * Renderiza o card de saldo do cliente no cabeçalho.
-         * @param {string} clientId - O ID do cliente selecionado.
-         */
-        function renderClientBalance(clientId) {
-            if (!allClients || allClients.length === 0) return;
-
-            const client = allClients.find(c => c.id == clientId);
-            if (!client) {
+        function renderClientBalance() {
+            if (!selectedClient) {
                 clientBalanceContainer.innerHTML = '';
                 return;
             }
-
-            if (client.saldo === null || client.saldo === undefined) {
+            if (selectedClient.saldo === null || selectedClient.saldo === undefined) {
                 clientBalanceContainer.innerHTML = `
                     <div class="text-center">
                         <p class="text-xs font-medium text-slate-500">Status</p>
-                        <p class="font-bold text-slate-700">Pré-Pago</p>
+                        <p class="font-bold text-slate-700">Não Aplicável</p>
                     </div>`;
             } else {
-                const balanceValue = parseFloat(client.saldo);
+                const balanceValue = parseFloat(selectedClient.saldo);
                 const colorClass = balanceValue < 30 ? 'text-red-600' : 'text-emerald-600';
                 clientBalanceContainer.innerHTML = `
                     <div class="text-center">
-                        <p class="text-xs font-medium text-slate-500">Saldo Atual</p>
+                        <p class="text-xs font-medium text-slate-500">Saldo Meta</p>
                         <p class="font-extrabold text-lg ${colorClass}">${formatCurrency(balanceValue)}</p>
                     </div>`;
             }
         }
 
-        function renderKpiCards(totals) {
+        // Funções de Renderização para META
+        function renderMetaKpiCards(totals) {
             const kpiInfo = {
-                gasto: { title: 'Investimento Total', icon: 'fas fa-wallet', description: 'Este é o valor total que foi gasto em todas as campanhas no período selecionado. Ajuda a controlar o orçamento.' },
-                cliques: { title: 'Cliques Totais', icon: 'fas fa-mouse-pointer', description: 'O número total de vezes que os seus anúncios foram clicados. Indica o quão atrativos os seus anúncios são para o público.' },
-                impressoes: { title: 'Impressões', icon: 'fas fa-eye', description: 'O número de vezes que os seus anúncios foram exibidos. É a base para medir o alcance e a frequência.' },
-                clique_direto_wpp: { title: 'Msgs. WhatsApp', icon: 'fab fa-whatsapp', description: 'O número total de cliques que iniciaram uma conversa no WhatsApp. Mede o interesse direto do cliente.' },
-                ctr: { title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques. A percentagem de pessoas que clicaram no seu anúncio após o verem. Um CTR alto indica um anúncio relevante.' },
-                cpm: { title: 'CPM Médio', icon: 'fas fa-users', description: 'Custo Por Mil Impressões. O valor médio pago para que o seu anúncio seja exibido 1.000 vezes.' },
-                alcance: { title: 'Alcance', icon: 'fas fa-user-friends', description: 'O número de pessoas únicas que viram os seus anúncios. Mede o tamanho real da sua audiência.' },
-                frequencia: { title: 'Frequência', icon: 'fas fa-redo-alt', description: 'O número médio de vezes que cada pessoa viu o seu anúncio. Ajuda a evitar a fadiga do anúncio.' }
+                gasto: { title: 'Investimento Total', icon: 'fas fa-wallet', description: 'Valor total gasto em todas as campanhas no período.' },
+                cliques: { title: 'Cliques Totais', icon: 'fas fa-mouse-pointer', description: 'Número total de cliques nos anúncios.' },
+                impressoes: { title: 'Impressões', icon: 'fas fa-eye', description: 'Número de vezes que os anúncios foram exibidos.' },
+                clique_direto_wpp: { title: 'Msgs. WhatsApp', icon: 'fab fa-whatsapp', description: 'Cliques que iniciaram uma conversa no WhatsApp.' },
+                ctr: { title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques (Cliques ÷ Impressões). Indica a relevância do anúncio.' },
+                cpm: { title: 'CPM Médio', icon: 'fas fa-users', description: 'Custo Por Mil Impressões. Custo para exibir o anúncio 1.000 vezes.' },
+                alcance: { title: 'Alcance', icon: 'fas fa-user-friends', description: 'Número de pessoas únicas que viram os anúncios.' },
+                frequencia: { title: 'Frequência', icon: 'fas fa-redo-alt', description: 'Número médio de vezes que cada pessoa viu o anúncio.' }
             };
-
-            kpiGrid.innerHTML = `
+            metaKpiGrid.innerHTML = `
                 ${createKpiCard(kpiInfo.gasto.title, formatCurrency(totals.gasto), kpiInfo.gasto.icon, kpiInfo.gasto.description, 0)}
                 ${createKpiCard(kpiInfo.cliques.title, formatInteger(totals.cliques), kpiInfo.cliques.icon, kpiInfo.cliques.description, 50)}
                 ${createKpiCard(kpiInfo.impressoes.title, formatInteger(totals.impressoes), kpiInfo.impressoes.icon, kpiInfo.impressoes.description, 100)}
@@ -550,261 +840,157 @@
                 ${createKpiCard(kpiInfo.frequencia.title, formatDecimal(totals.frequencia), kpiInfo.frequencia.icon, kpiInfo.frequencia.description, 350)}
             `;
         }
-        
-        function getObjectiveInfo(objectiveKey) {
-            const objectives = {
-                'OUTCOME_ENGAGEMENT': { icon: 'fas fa-comments', color: 'blue', text: 'Engajamento', description: 'Otimizado para obter mais curtidas, comentários, compartilhamentos ou outras interações.' },
-                'OUTCOME_LEADS': { icon: 'fas fa-user-plus', color: 'green', text: 'Leads', description: 'Otimizado para capturar informações de contato de potenciais clientes.' },
-                'OUTCOME_SALES': { icon: 'fas fa-dollar-sign', color: 'yellow', text: 'Vendas', description: 'Otimizado para gerar vendas diretas no seu site ou app.' },
-                'OUTCOME_AWARENESS': { icon: 'fas fa-bullhorn', color: 'purple', text: 'Reconhecimento', description: 'Otimizado para alcançar o maior número de pessoas e aumentar a notoriedade da marca.' },
-                'OUTCOME_TRAFFIC': { icon: 'fas fa-mouse-pointer', color: 'indigo', text: 'Tráfego', description: 'Otimizado para levar pessoas para um destino, como o seu site.' },
-                'DEFAULT': { icon: 'fas fa-question-circle', color: 'slate', text: 'Não definido', description: 'O objetivo desta campanha não foi especificado ou não é reconhecido.' }
-            };
-            const colors = {
-                blue: 'bg-blue-100 text-blue-600',
-                green: 'bg-green-100 text-green-600',
-                yellow: 'bg-yellow-100 text-yellow-600',
-                purple: 'bg-purple-100 text-purple-600',
-                indigo: 'bg-indigo-100 text-indigo-600',
-                slate: 'bg-slate-100 text-slate-600'
-            };
-            const info = objectives[objectiveKey] || objectives['DEFAULT'];
-            return { ...info, colorClass: colors[info.color] };
+
+        function renderMetaCampaignsTable(campaignsData) {
+            metaNoCampaignsMessage.classList.add('hidden');
+            const activeCampaigns = campaignsData.filter(c => c.gasto > 0);
+            if (activeCampaigns.length === 0) {
+                metaCampaignsTableBody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">Nenhuma campanha do Meta teve atividade no período.</td></tr>`;
+                return;
+            }
+            metaCampaignsTableBody.innerHTML = activeCampaigns.map(c => `
+                <tr class="campaign-row bg-white border-b hover:bg-slate-50 transition-colors" data-campaign-id="${c.id}" data-campaign-name="${c.nome}">
+                    <th scope="row" class="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">${c.nome}</th>
+                    <td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${c.status_campanha === 'ATIVA' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}">${c.status_campanha}</span></td>
+                    <td class="px-6 py-4 text-right">${formatCurrency(c.gasto)}</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(c.cliques)}</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(c.clique_direto_wpp)}</td>
+                    <td class="px-6 py-4 text-right">${formatDecimal(c.ctr)}%</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(c.impressoes)}</td>
+                </tr>`).join('');
         }
 
-        function renderCampaignsTable(campaignsData) {
-            if (!campaignsData || campaignsData.length === 0) {
-                campaignsTableBody.innerHTML = '';
-                noCampaignsMessage.classList.remove('hidden');
+        function renderMetaPerformanceChart(dailyHistory, startDate, endDate) {
+            if (!dailyHistory || dailyHistory.length === 0) {
+                metaNoChartDataMessage.classList.remove('hidden');
+                if (metaPerformanceChart) metaPerformanceChart.destroy();
                 return;
             }
+            metaNoChartDataMessage.classList.add('hidden');
+            const chartConfig = createChartConfig(
+                dailyHistory.map(h => h.date),
+                { label: 'Gasto (R$)', data: dailyHistory.map(h => h.gasto), yAxisID: 'y', type: 'line', color: '#10b981' },
+                { label: 'Cliques', data: dailyHistory.map(h => h.cliques), yAxisID: 'y1', type: 'bar', color: '#f59e0b' },
+                startDate,
+                endDate
+            );
+            if (metaPerformanceChart) metaPerformanceChart.destroy();
+            metaPerformanceChart = new Chart(metaPerformanceChartCanvas, chartConfig);
+        }
 
-            const activeCampaignsInPeriod = campaignsData.filter(c => c.gasto > 0);
+        // Funções de Renderização para GOOGLE
+        function renderGoogleKpiCards(totals) {
+            const kpiInfo = {
+                cost: { title: 'Custo Total', icon: 'fas fa-wallet', description: 'Custo total de todas as campanhas do Google Ads no período.' },
+                conversions: { title: 'Conversões', icon: 'fas fa-bullseye', description: 'Número de ações valiosas concluídas (ex: vendas, leads).' },
+                clicks: { title: 'Cliques', icon: 'fas fa-hand-pointer', description: 'Número total de cliques nos seus anúncios do Google.' },
+                impressions: { title: 'Impressões', icon: 'fas fa-eye', description: 'Número de vezes que os anúncios foram exibidos na rede do Google.' },
+                ctr: { title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques (Cliques ÷ Impressões). Mede a eficácia do anúncio.' },
+                cpc: { title: 'CPC Médio', icon: 'fas fa-coins', description: 'Custo Por Clique. O valor médio pago por cada clique no anúncio.' },
+                cpa: { title: 'CPA Médio', icon: 'fas fa-hand-holding-dollar', description: 'Custo Por Aquisição/Conversão. Custo médio por cada conversão.' }
+            };
+            googleKpiGrid.innerHTML = `
+                ${createKpiCard(kpiInfo.cost.title, formatCurrency(totals.cost), kpiInfo.cost.icon, kpiInfo.cost.description, 0)}
+                ${createKpiCard(kpiInfo.conversions.title, formatInteger(totals.conversions), kpiInfo.conversions.icon, kpiInfo.conversions.description, 50)}
+                ${createKpiCard(kpiInfo.clicks.title, formatInteger(totals.clicks), kpiInfo.clicks.icon, kpiInfo.clicks.description, 100)}
+                ${createKpiCard(kpiInfo.impressions.title, formatInteger(totals.impressions), kpiInfo.impressions.icon, kpiInfo.impressions.description, 150)}
+                ${createKpiCard(kpiInfo.ctr.title, `${formatDecimal(totals.ctr)}%`, kpiInfo.ctr.icon, kpiInfo.ctr.description, 200)}
+                ${createKpiCard(kpiInfo.cpc.title, formatCurrency(totals.cpc), kpiInfo.cpc.icon, kpiInfo.cpc.description, 250)}
+                ${createKpiCard(kpiInfo.cpa.title, formatCurrency(totals.cpa), kpiInfo.cpa.icon, kpiInfo.cpa.description, 300)}
+                <div class="bg-transparent"></div> <!-- Placeholder -->
+            `;
+        }
 
-            if (activeCampaignsInPeriod.length === 0) {
-                campaignsTableBody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-slate-500">Nenhuma campanha teve atividade no período selecionado.</td></tr>`;
+        function renderGoogleCampaignsTable(campaignsData) {
+            googleNoCampaignsMessage.classList.add('hidden');
+            const activeCampaigns = campaignsData.filter(c => c.cost > 0);
+            if (activeCampaigns.length === 0) {
+                googleCampaignsTableBody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">Nenhuma campanha do Google teve atividade no período.</td></tr>`;
                 return;
             }
+            googleCampaignsTableBody.innerHTML = activeCampaigns.map(c => `
+                <tr class="campaign-row bg-white border-b hover:bg-slate-50 transition-colors" data-campaign-id="${c.id}" data-campaign-name="${c.nome_campanha}">
+                    <th scope="row" class="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">${c.nome_campanha}</th>
+                    <td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${c.status === 'ENABLED' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}">${c.status}</span></td>
+                    <td class="px-6 py-4 text-right">${formatCurrency(c.cost)}</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(c.conversions)}</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(c.clicks)}</td>
+                    <td class="px-6 py-4 text-right">${formatDecimal(c.ctr)}%</td>
+                    <td class="px-6 py-4 text-right">${formatInteger(c.impressions)}</td>
+                </tr>`).join('');
+        }
 
-            campaignsTableBody.innerHTML = activeCampaignsInPeriod.map(campaign => {
-                const objectiveInfo = getObjectiveInfo(campaign.objetivo);
-                return `
-                <tr class="campaign-row bg-white border-b hover:bg-slate-50 cursor-pointer transition-colors" data-campaign-id="${campaign.id}" data-campaign-name="${campaign.nome}">
-                    <th scope="row" class="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">
-                        <div class="flex items-center gap-3">
-                            <div class="group relative">
-                                <span class="w-8 h-8 rounded-full flex items-center justify-center ${objectiveInfo.colorClass}">
-                                    <i class="${objectiveInfo.icon}"></i>
-                                </span>
-                                <!-- Tooltip -->
-                                <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-lg bg-emerald-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                                    <strong>${objectiveInfo.text}</strong>: ${objectiveInfo.description}
-                                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-emerald-800"></div>
-                                </div>
-                            </div>
-                            <span>${campaign.nome}</span>
-                        </div>
-                    </th>
-                    <td class="px-6 py-4">
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${campaign.status_campanha === 'ATIVA' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}">${campaign.status_campanha}</span>
-                    </td>
-                    <td class="px-6 py-4 text-right">${formatCurrency(campaign.gasto)}</td>
-                    <td class="px-6 py-4 text-right">${formatInteger(campaign.cliques)}</td>
-                    <td class="px-6 py-4 text-right">${formatInteger(campaign.clique_direto_wpp)}</td>
-                    <td class="px-6 py-4 text-right">${formatDecimal(campaign.ctr)}%</td>
-                    <td class="px-6 py-4 text-right">${formatInteger(campaign.impressoes)}</td>
-                </tr>
-            `}).join('');
-
-            document.querySelectorAll('.campaign-row').forEach(row => {
-                row.addEventListener('click', handleCampaignRowClick);
-            });
+        function renderGooglePerformanceChart(dailyHistory, startDate, endDate) {
+            if (!dailyHistory || dailyHistory.length === 0) {
+                googleNoChartDataMessage.classList.remove('hidden');
+                if (googlePerformanceChart) googlePerformanceChart.destroy();
+                return;
+            }
+            googleNoChartDataMessage.classList.add('hidden');
+            const chartConfig = createChartConfig(
+                dailyHistory.map(h => h.date),
+                { label: 'Custo (R$)', data: dailyHistory.map(h => h.cost), yAxisID: 'y', type: 'line', color: '#4285F4' }, // Google Blue
+                { label: 'Conversões', data: dailyHistory.map(h => h.conversions), yAxisID: 'y1', type: 'bar', color: '#34A853' }, // Google Green
+                startDate,
+                endDate
+            );
+            if (googlePerformanceChart) googlePerformanceChart.destroy();
+            googlePerformanceChart = new Chart(googlePerformanceChartCanvas, chartConfig);
         }
 
         /**
-         * Renderiza ou atualiza o gráfico de performance com dados diários agregados.
-         * @param {Array} dailyHistory - Array com o histórico diário agregado do cliente.
-         * @param {Date} startDate - A data de início do período para o eixo do gráfico.
-         * @param {Date} endDate - A data de fim do período para o eixo do gráfico.
+         * Função genérica para criar a configuração de um gráfico.
          */
-        function renderPerformanceChart(dailyHistory, startDate, endDate) {
-            if (!dailyHistory || dailyHistory.length === 0) {
-                noChartDataMessage.classList.remove('hidden');
-                if (performanceChart) performanceChart.destroy();
-                return;
-            }
-            
-            noChartDataMessage.classList.add('hidden');
-            
-            const ctx = performanceChartCanvas.getContext('2d');
-            const lineGradient = ctx.createLinearGradient(0, 0, 0, 350);
-            lineGradient.addColorStop(0, 'rgba(16, 185, 129, 0.5)');
-            lineGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-
-            const barGradient = ctx.createLinearGradient(0, 0, 0, 350);
-            barGradient.addColorStop(0, 'rgba(245, 158, 11, 0.8)');
-            barGradient.addColorStop(1, 'rgba(245, 158, 11, 0.6)');
-
-            const labels = dailyHistory.map(h => h.date);
-            const gastoData = dailyHistory.map(h => h.gasto);
-            const cliquesData = dailyHistory.map(h => h.cliques);
-
-            const chartData = {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Gasto (R$)',
-                        data: gastoData,
-                        borderColor: '#10b981', // emerald-500
-                        backgroundColor: lineGradient,
-                        yAxisID: 'y',
-                        type: 'line',
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#10b981',
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointHoverBorderColor: 'white',
-                        pointHoverBorderWidth: 2,
-                        borderWidth: 2.5
-                    },
-                    {
-                        label: 'Cliques',
-                        data: cliquesData,
-                        backgroundColor: barGradient,
-                        borderColor: 'rgba(245, 158, 11, 1)',
-                        borderWidth: 1,
-                        yAxisID: 'y1',
-                        type: 'bar',
-                        borderRadius: 6,
-                        barPercentage: 0.7
-                    }
-                ]
+        function createChartConfig(labels, dataset1, dataset2, startDate, endDate) {
+            const createGradient = (ctx, color) => {
+                const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                const rgbColor = color.startsWith('#') ? `${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}` : '16, 185, 129';
+                gradient.addColorStop(0, `rgba(${rgbColor}, 0.5)`);
+                gradient.addColorStop(1, `rgba(${rgbColor}, 0)`);
+                return gradient;
             };
 
-            const config = {
+            return {
                 type: 'bar',
-                data: chartData,
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { ...dataset1, backgroundColor: (context) => createGradient(context.chart.ctx, dataset1.color), borderColor: dataset1.color, tension: 0.4, fill: true, pointRadius: 0, pointHoverRadius: 6, pointHoverBorderColor: 'white', pointHoverBorderWidth: 2, borderWidth: 2.5 },
+                        { ...dataset2, backgroundColor: dataset2.color, borderColor: dataset2.color, borderWidth: 1, borderRadius: 6, barPercentage: 0.7 }
+                    ]
+                },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 1000,
-                        easing: 'easeInOutQuart'
-                    },
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeInOutQuart' },
                     interaction: { mode: 'index', intersect: false },
                     scales: {
-                        x: { 
-                            type: 'time', 
-                            time: { unit: 'day', tooltipFormat: 'dd/MM/yyyy' }, 
-                            grid: { display: false },
-                            ticks: { color: '#64748b' },
-                            min: startDate ? startDate.toISOString().split('T')[0] : undefined,
-                            max: endDate ? endDate.toISOString().split('T')[0] : undefined
-                        },
-                        y: { 
-                            type: 'linear', 
-                            display: true, 
-                            position: 'left', 
-                            grid: { color: '#e2e8f0' },
-                            ticks: { color: '#64748b' }
-                        },
-                        y1: { 
-                            type: 'linear', 
-                            display: true, 
-                            position: 'right', 
-                            grid: { drawOnChartArea: false } ,
-                            ticks: { color: '#64748b' }
-                        },
+                        x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd/MM/yyyy' }, grid: { display: false }, ticks: { color: '#64748b' }, min: startDate?.toISOString().split('T')[0], max: endDate?.toISOString().split('T')[0] },
+                        y: { type: 'linear', display: true, position: 'left', grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } },
+                        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#64748b' } },
                     },
                     plugins: {
-                        legend: {
-                            position: 'top',
-                            align: 'end',
-                            labels: {
-                                usePointStyle: true,
-                                boxWidth: 8,
-                                color: '#475569'
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: '#1e293b',
-                            titleFont: { weight: 'bold' },
-                            bodySpacing: 4,
-                            padding: 12,
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    if (context.parsed.y !== null) {
-                                        label += context.dataset.yAxisID === 'y' ? formatCurrency(context.parsed.y) : formatInteger(context.parsed.y);
-                                    }
-                                    return label;
+                        legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, color: '#475569' } },
+                        tooltip: { backgroundColor: '#1e293b', titleFont: { weight: 'bold' }, bodySpacing: 4, padding: 12, callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    label += context.dataset.yAxisID === 'y' ? formatCurrency(context.parsed.y) : formatInteger(context.parsed.y);
                                 }
+                                return label;
                             }
-                        }
+                        }}
                     }
                 },
             };
-
-            if (performanceChart) performanceChart.destroy();
-            performanceChart = new Chart(performanceChartCanvas, config);
-        }
-        
-        // --- 6. LÓGICA DA ANÁLISE COM IA (GEMINI) E INTERATIVIDADE ---
-        
-        function handleCampaignRowClick(event) {
-            const row = event.currentTarget;
-            const campaignId = row.dataset.campaignId;
-            const campaignName = row.dataset.campaignName;
-
-            // Desselecionar se clicar na mesma campanha novamente
-            if (campaignId === currentChartCampaignId) {
-                currentChartCampaignId = null;
-                document.querySelectorAll('.campaign-row').forEach(r => r.classList.remove('selected'));
-                chartTitle.textContent = 'Performance Diária do Cliente';
-                
-                // Re-renderiza o gráfico com os dados globais
-                const { startDate, endDate } = getDateRange(dateFiltersContainer.querySelector('.active').dataset.period, clientFullHistory[0]?.data_relatorio);
-                renderPerformanceChart(lastAggregatedData.dailyHistory, startDate, endDate);
-                return;
-            }
-
-            // Selecionar uma nova campanha
-            currentChartCampaignId = campaignId;
-            document.querySelectorAll('.campaign-row').forEach(r => r.classList.remove('selected'));
-            row.classList.add('selected');
-            chartTitle.textContent = `Performance: ${campaignName}`;
-
-            // Filtra o histórico apenas para esta campanha
-            const campaignHistory = clientFullHistory.filter(h => h.campanha_id === campaignId);
-            
-            // Agrega os dados diários para a campanha selecionada
-            const dailyHistoryMap = new Map();
-            campaignHistory.forEach(item => {
-                const dateKey = new Date(item.data_relatorio).toISOString().split('T')[0];
-
-                if (!dailyHistoryMap.has(dateKey)) {
-                    dailyHistoryMap.set(dateKey, { gasto: 0, cliques: 0, impressoes: 0 });
-                }
-                const dayData = dailyHistoryMap.get(dateKey);
-                dayData.gasto += Number(item.gasto) || 0;
-                dayData.cliques += Number(item.cliques) || 0;
-                dayData.impressoes += Number(item.impressoes) || 0;
-            });
-
-            const singleCampaignDailyHistory = Array.from(dailyHistoryMap.entries())
-                .map(([date, metrics]) => ({ date, ...metrics }))
-                .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            // Re-renderiza o gráfico com os dados da campanha
-            const { startDate, endDate } = getDateRange(dateFiltersContainer.querySelector('.active').dataset.period, clientFullHistory[0]?.data_relatorio);
-            renderPerformanceChart(singleCampaignDailyHistory, startDate, endDate);
         }
 
+
+        // --- 7. LÓGICA DA ANÁLISE COM IA (GEMINI) E INTERATIVIDADE ---
+        
         async function handleGenerateAnalysis() {
             if (!lastAggregatedData) {
-                alert("Não há dados carregados para análise. Por favor, atualize o dashboard.");
+                // Não use alert, pois pode ser bloqueado. Considere um modal de erro no futuro.
+                console.warn("Não há dados carregados para análise.");
                 return;
             }
             
@@ -815,12 +1001,14 @@
             geminiAnalysisButton.querySelector('span').textContent = 'A analisar...';
 
             try {
-                const prompt = createPromptForGemini(lastAggregatedData);
+                const prompt = lastAggregatedData.platform === 'meta' 
+                    ? createPromptForGeminiMeta(lastAggregatedData)
+                    : createPromptForGeminiGoogle(lastAggregatedData);
                 
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
                 const payload = { contents: chatHistory };
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -848,122 +1036,79 @@
             }
         }
 
-        function createPromptForGemini(data) {
-            const clientName = allClients.find(c => c.id == selectedClientId)?.nome || 'Cliente';
-            const period = dateFiltersContainer.querySelector('.active').textContent;
-            
+        function createPromptForGeminiMeta(data) {
             const { totals, campaignsWithMetrics } = data;
-
-            const sortedCampaigns = [...campaignsWithMetrics]
-                .filter(c => c.gasto > 0)
-                .sort((a, b) => b.gasto - a.gasto);
-
-            let campaignsSummary = sortedCampaigns
-                .slice(0, 5)
-                .map(c => `- Campanha "${c.nome}": Gasto de ${formatCurrency(c.gasto)}, CTR de ${formatDecimal(c.ctr)}%, Mensagens WPP: ${formatInteger(c.clique_direto_wpp)}`)
-                .join('\n');
+            const campaignsSummary = campaignsWithMetrics.filter(c => c.gasto > 0).sort((a,b) => b.gasto - a.gasto).slice(0, 5)
+                .map(c => `- Campanha "${c.nome}": Gasto de ${formatCurrency(c.gasto)}, CTR de ${formatDecimal(c.ctr)}%, Mensagens WPP: ${formatInteger(c.clique_direto_wpp)}`).join('\n');
             
-            if (sortedCampaigns.length === 0) {
-                campaignsSummary = "Nenhuma campanha teve atividade neste período.";
-            }
+            return `Você é um especialista em marketing digital e análise de tráfego pago para Meta Ads. Analise os seguintes dados para o cliente "${selectedClient.name}" no período de "${dateFiltersContainer.querySelector('.active').textContent}".
+            **Métricas Gerais (Meta Ads):**
+            - Investimento Total: ${formatCurrency(totals.gasto)}
+            - Cliques Totais: ${formatInteger(totals.cliques)}
+            - Impressões: ${formatInteger(totals.impressoes)}
+            - Mensagens WhatsApp: ${formatInteger(totals.clique_direto_wpp)}
+            - CPM Médio: ${formatCurrency(totals.cpm)}
+            - CTR Médio: ${formatDecimal(totals.ctr)}%
+            - Alcance: ${formatInteger(totals.alcance)}
+            - Frequência: ${formatDecimal(totals.frequencia)}
+            **Resumo das Principais Campanhas:**
+            ${campaignsSummary || "Nenhuma campanha ativa no período."}
+            Forneça uma análise concisa em markdown com ### Resumo Geral, ### Destaques Positivos, ### Pontos de Atenção, e ### Recomendação.`;
+        }
 
-            return `
-                Você é um especialista em marketing digital e análise de tráfego pago.
-                Analise os seguintes dados de performance para o cliente "${clientName}" referentes ao período: "${period}".
+        function createPromptForGeminiGoogle(data) {
+            const { totals, campaignsWithMetrics } = data;
+            const campaignsSummary = campaignsWithMetrics.filter(c => c.cost > 0).sort((a,b) => b.cost - a.cost).slice(0, 5)
+                .map(c => `- Campanha "${c.nome_campanha}": Custo de ${formatCurrency(c.cost)}, ${formatInteger(c.conversions)} conversões, CTR de ${formatDecimal(c.ctr)}%`).join('\n');
 
-                **Métricas Gerais do Período:**
-                - Investimento Total: ${formatCurrency(totals.gasto)}
-                - Cliques Totais: ${formatInteger(totals.cliques)}
-                - Impressões Totais: ${formatInteger(totals.impressoes)}
-                - Mensagens WhatsApp: ${formatInteger(totals.clique_direto_wpp)}
-                - Custo por Mil Impressões (CPM) Médio: ${formatCurrency(totals.cpm)}
-                - Taxa de Cliques (CTR) Média: ${formatDecimal(totals.ctr)}%
-                - Alcance: ${formatInteger(totals.alcance)}
-                - Frequência: ${formatDecimal(totals.frequencia)}
-
-                **Resumo das Principais Campanhas Ativas no Período:**
-                ${campaignsSummary}
-
-                Com base nestes dados, forneça uma análise concisa em português para um relatório. Use o seguinte formato de markdown:
-                ### Resumo Geral
-                [Faça um resumo de 1-2 frases sobre a performance geral da conta no período.]
-
-                ### Destaques Positivos
-                - [Ponto positivo 1, ex: O CTR geral está bom, indicando anúncios relevantes.]
-                - [Ponto positivo 2, ex: A campanha X está com um Custo por Mensagem baixo.]
-
-                ### Pontos de Atenção
-                - [Ponto de atenção 1, ex: A frequência da campanha Y está alta, podendo causar fadiga.]
-                - [Ponto de atenção 2, ex: A campanha Z teve um gasto alto mas poucas mensagens.]
-
-                ### Recomendação
-                - [Forneça uma recomendação clara e acionável com base nos pontos de atenção. Ex: Sugiro pausar a campanha Z e realocar o orçamento para a campanha X, que está a performar melhor.]
-            `;
+            return `Você é um especialista em marketing digital e análise de tráfego pago para Google Ads. Analise os seguintes dados para o cliente "${selectedClient.name}" no período de "${dateFiltersContainer.querySelector('.active').textContent}".
+            **Métricas Gerais (Google Ads):**
+            - Custo Total: ${formatCurrency(totals.cost)}
+            - Conversões: ${formatInteger(totals.conversions)}
+            - Cliques: ${formatInteger(totals.clicks)}
+            - Impressões: ${formatInteger(totals.impressions)}
+            - Custo por Clique (CPC) Médio: ${formatCurrency(totals.cpc)}
+            - Custo por Aquisição (CPA) Médio: ${formatCurrency(totals.cpa)}
+            - Taxa de Cliques (CTR) Média: ${formatDecimal(totals.ctr)}%
+            **Resumo das Principais Campanhas:**
+            ${campaignsSummary || "Nenhuma campanha ativa no período."}
+            Forneça uma análise concisa em markdown com ### Resumo Geral, ### Destaques Positivos, ### Pontos de Atenção, e ### Recomendação.`;
         }
 
         function renderAnalysisResult(text) {
             const html = text
                 .replace(/### (.*)/g, '<h3>$1</h3>')
-                .replace(/\* (.*)/g, '<li>$1</li>')
-                .replace(/- (.*)/g, '<li>$1</li>')
-                .replace(/\n/g, '<br>')
-                .replace(/<br><li>/g, '<li>')
-                .replace(/<\/li><br>/g, '</li>'); 
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/^- (.*$)/gm, '<li>$1</li>')
+                .replace(/^\* (.*$)/gm, '<li>$1</li>');
+
+            const groupedListItems = html.replace(/(<\/li>\s*<li>)/g, '</li><li>');
+            const finalHtml = groupedListItems.replace(/(<li>.*<\/li>)/gs, (match) => `<ul>${match}</ul>`);
             
-            const finalHtml = html.replace(/<li>(.*?)<\/li>/gs, (match) => {
-                return `<ul>${match}</ul>`;
-            }).replace(/<\/ul><ul>/g, '');
-
-            analysisModalContent.innerHTML = finalHtml;
+            analysisModalContent.innerHTML = finalHtml.replace(/<\/ul>\s*<ul>/g, '');
         }
 
 
-        // --- 7. EVENT LISTENERS E INICIALIZAÇÃO DA APLICAÇÃO ---
+        // --- 8. EVENT LISTENERS E INICIALIZAÇÃO DA APLICAÇÃO ---
 
-        function selectClient(client) {
-            selectedClientId = client.id;
-            clientSearchInput.value = client.nome;
-            searchResultsContainer.classList.add('hidden');
+        clientSelect.addEventListener('change', () => {
+            const clientName = clientSelect.value;
+            selectedClient = allClients.find(c => c.name === clientName) || null;
             updateDashboard();
-        }
-
-        clientSearchInput.addEventListener('input', () => {
-            const searchTerm = clientSearchInput.value.toLowerCase();
-            if (searchTerm.length < 3) {
-                searchResultsContainer.classList.add('hidden');
-                return;
-            }
-
-            const filteredClients = allClients.filter(client => 
-                client.nome.toLowerCase().includes(searchTerm)
-            );
-
-            if (filteredClients.length > 0) {
-                searchResultsContainer.innerHTML = filteredClients.map(client => 
-                    `<div class="p-3 hover:bg-emerald-50 cursor-pointer search-result-item" data-client-id="${client.id}">
-                        ${client.nome}
-                    </div>`
-                ).join('');
-                searchResultsContainer.classList.remove('hidden');
-            } else {
-                searchResultsContainer.classList.add('hidden');
-            }
         });
 
-        searchResultsContainer.addEventListener('click', (event) => {
-            const target = event.target.closest('.search-result-item');
-            if (target) {
-                const clientId = target.dataset.clientId;
-                const client = allClients.find(c => c.id === clientId);
-                if (client) {
-                    selectClient(client);
-                }
-            }
-        });
+        platformTabs.addEventListener('click', (event) => {
+            const tab = event.target.closest('.platform-tab');
+            if (tab && !tab.classList.contains('active')) {
+                platformTabs.querySelector('.active').classList.remove('active');
+                tab.classList.add('active');
+                currentPlatform = tab.dataset.platform;
+                
+                // Esconde ambos os painéis antes de decidir qual mostrar
+                metaDashboardContent.classList.add('hidden');
+                googleDashboardContent.classList.add('hidden');
 
-        document.addEventListener('click', (event) => {
-            if (!clientSearchInput.contains(event.target) && !searchResultsContainer.contains(event.target)) {
-                searchResultsContainer.classList.add('hidden');
+                updateDashboard(); // Recarrega os dados para a nova plataforma
             }
         });
 
@@ -981,22 +1126,20 @@
         geminiAnalysisButton.addEventListener('click', handleGenerateAnalysis);
         closeAnalysisModalButton.addEventListener('click', () => analysisModal.classList.add('hidden'));
         analysisModal.addEventListener('click', (event) => {
-            if (event.target === analysisModal) {
-                analysisModal.classList.add('hidden');
-            }
+            if (event.target === analysisModal) analysisModal.classList.add('hidden');
         });
         copyAnalysisButton.addEventListener('click', () => {
-            const textToCopy = analysisModalContent.innerText;
-            copyHelper.value = textToCopy;
+            copyHelper.value = analysisModalContent.innerText;
             copyHelper.select();
             document.execCommand('copy');
             copyAnalysisButton.querySelector('span').textContent = 'Copiado!';
-            setTimeout(() => {
-                copyAnalysisButton.querySelector('span').textContent = 'Copiar';
-            }, 2000);
+            setTimeout(() => { copyAnalysisButton.querySelector('span').textContent = 'Copiar'; }, 2000);
         });
 
-        document.addEventListener('DOMContentLoaded', fetchClients);
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAllClients();
+            showInitialMessage();
+        });
 
     </script>
 </body>
