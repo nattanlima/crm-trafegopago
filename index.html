@@ -3,8 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Performance Avançado</title>
+    <title>Prisme Sales - Dashboard de Performance Avançado</title>
     
+    <!-- PWA and Favicon Setup -->
+    <meta name="theme-color" content="#059669">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://raw.githubusercontent.com/nattanlima/meu-crm-pwa/main/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://raw.githubusercontent.com/nattanlima/meu-crm-pwa/main/icons/favicon-16x16.png">
+    <link rel="shortcut icon" href="https://raw.githubusercontent.com/nattanlima/meu-crm-pwa/main/icons/favicon-16x16.ico">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/nattanlima/meu-crm-pwa/main/icons/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -24,6 +32,7 @@
         body {
             background-color: #f0f2f5; /* Um cinza mais suave para o fundo */
             font-family: 'Inter', sans-serif;
+            overflow: hidden;
         }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -114,192 +123,322 @@
         .platform-tab:hover {
             background-color: #f8fafc; /* slate-50 */
         }
+
+        /* Estilos para o seletor de cliente aprimorado */
+        .client-option-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: background-color 0.2s;
+        }
+        .client-option-item:hover {
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        .client-option-item .platform-indicator-container {
+            display: flex;
+            gap: 8px;
+            width: 40px;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+            align-items: center;
+        }
+
+        /* Estilos para personalização de KPIs */
+        .kpi-card-container .kpi-close-btn {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .kpi-card-container:hover .kpi-close-btn {
+            opacity: 1;
+        }
+        .kpi-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #cbd5e1; /* slate-300 */
+            color: #94a3b8; /* slate-400 */
+            min-height: 130px;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .kpi-placeholder:hover {
+            background-color: #f8fafc; /* slate-50 */
+            border-color: #94a3b8; /* slate-400 */
+            color: #475569; /* slate-600 */
+        }
+        #kpi-chooser-menu {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        
+        /* Estilos para os botões de seleção de métricas do gráfico */
+        .metric-selector-btn {
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease-in-out;
+        }
+        .metric-selector-btn.active {
+            background-color: #059669;
+            color: white;
+            border-color: #047857;
+            font-weight: 600;
+        }
+        .metric-selector-btn .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            transition: transform 0.2s ease-in-out;
+        }
+        .metric-selector-btn.active .color-dot {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 2px white;
+        }
+        
+        /* Estilos do Login e App Wrapper */
+        .form-input {
+             margin-top: 4px; display: block; width: 100%; border-radius: 0.5rem; border: 1px solid #d4d4d8; padding: 0.5rem 0.75rem; background-color: #fafafa;
+        }
+        .form-input:focus {
+             border-color: #16a34a; outline: 2px solid transparent; outline-offset: 2px; box-shadow: 0 0 0 2px #a7f3d0;
+        }
+        .popup-menu {
+            transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+        }
+        .popup-menu.hidden {
+            transform: translateY(-10px);
+            opacity: 0;
+            pointer-events: none;
+        }
+        #dashboard-wrapper {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #app {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
     </style>
 </head>
-<body class="text-slate-800">
+<body class="font-sans h-full">
 
-    <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto">
-        <!-- Cabeçalho da Aplicação -->
-        <header class="mb-6">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                <!-- Título e Subtítulo -->
-                <div class="w-full md:w-1/4">
-                    <h1 class="text-3xl font-extrabold text-slate-900 whitespace-nowrap">Dashboard</h1>
-                    <p class="text-slate-500 mt-1 whitespace-nowrap">Performance de Campanhas</p>
-                </div>
-                <!-- Seletor de Empresa -->
-                <div class="w-full md:w-1/2 relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="fas fa-building text-slate-400"></i>
-                    </div>
-                    <select id="client-select" class="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-full bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all appearance-none">
-                        <option value="">Selecione uma empresa...</option>
-                    </select>
-                </div>
-                <!-- Saldo e Ações -->
-                <div class="w-full md:w-1/4 flex items-center justify-end gap-3">
-                    <div id="client-balance-container" class="bg-white p-2 px-4 rounded-lg shadow-sm border min-h-[50px] flex items-center justify-center">
-                        <!-- Conteúdo do saldo -->
-                    </div>
-                    <button id="refresh-button" class="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex-shrink-0 h-[50px] w-[50px]">
-                        <i class="fas fa-sync-alt"></i>
+    <!-- Tela de Login -->
+    <div id="login-screen" class="flex items-center justify-center h-screen bg-slate-100 p-4">
+        <div class="w-full max-w-sm p-8 space-y-6 bg-white rounded-xl shadow-md">
+            <div class="text-center">
+                <img src="https://crm.prismeapp.com.br/web/binary/company_logo" alt="Logo Prisme Sales" class="mx-auto h-20 w-auto" onerror="this.style.display='none'">
+                <h2 class="mt-6 text-3xl font-bold text-gray-900">Prisme Sales - Ads</h2>
+                <p class="text-gray-500">Faça login para continuar</p>
+            </div>
+            <div id="login-error" class="hidden p-3 text-sm text-red-700 bg-red-100 rounded-lg"></div>
+            <form id="login-form" class="space-y-4">
+                <div><label for="email" class="text-sm font-medium text-gray-700">Email</label><input id="email" type="email" required class="form-input" placeholder="seuemail@prismeapp.com.br"></div>
+                <div><label for="telefone" class="text-sm font-medium text-gray-700">Sua senha</label><input id="telefone" type="password" required class="form-input" placeholder="••••••••"></div>
+                <div><button type="submit" class="w-full px-4 py-2 text-lg font-semibold text-white bg-[#2fc36a] rounded-full hover:bg-[#29a85b] transition-colors">Entrar</button></div>
+                <div>
+                    <button type="button" id="install-pwa-login-button" class="hidden w-full px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors flex items-center justify-center">
+                        <i class="fas fa-download mr-2"></i> Instalar App
                     </button>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tela de Carregamento -->
+    <div id="loading-screen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-100 z-50">
+        <div class="loader mb-4"></div>
+        <h2 class="text-2xl font-bold text-gray-600">Carregando dados...</h2>
+    </div>
+
+    <!-- Wrapper para o Dashboard -->
+    <div id="dashboard-wrapper" class="hidden">
+        <header class="bg-white p-2 sm:p-4 flex gap-4 justify-between items-center border-b border-slate-200 flex-shrink-0">
+            <div class="flex items-center space-x-3 flex-shrink-0">
+                 <img src="https://crm.prismeapp.com.br/web/binary/company_logo" alt="Logo da Empresa" class="h-8 w-auto" onerror="this.style.display='none'">
+                 <h1 class="text-xl md:text-2xl font-bold text-gray-800 hidden sm:block">Prisme Sales - Ads</h1>
             </div>
-             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <!-- Filtros de Data -->
-                <div id="date-filters" class="flex flex-wrap gap-1 p-1 bg-slate-200 rounded-full w-fit">
-                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all active" data-period="today">Ontem</button>
-                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="7">Últimos 7 dias</button>
-                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="30">Últimos 30 dias</button>
-                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="month">Mês Atual</button>
-                    <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="all">Todo o Período</button>
+            
+            <div class="w-full max-w-lg relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-slate-400"></i>
                 </div>
-                <!-- Botão de Análise com IA -->
-                <button id="gemini-analysis-button" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-2.5 px-5 rounded-full flex items-center justify-center gap-2 shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-wait">
-                    <i class="fas fa-wand-magic-sparkles"></i>
-                    <span>Gerar Análise com IA</span>
+                <input type="text" id="client-search-input" placeholder="Pesquise ou selecione uma empresa..." class="w-full pl-12 pr-10 py-2.5 border border-slate-300 rounded-full bg-slate-50 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all">
+                <button id="client-dropdown-toggle" class="absolute inset-y-0 right-0 px-4 flex items-center text-slate-500 hover:text-emerald-600 transition-colors">
+                    <i class="fas fa-chevron-down"></i>
                 </button>
+                <div id="client-options-container" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-4 justify-end flex-shrink-0">
+                <button id="install-pwa-header-button" class="hidden bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-3 rounded-full" title="Instalar App">
+                    <i class="fas fa-download"></i>
+                </button>
+                 <div id="user-menu-container" class="relative">
+                     <button id="user-avatar-btn" class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 overflow-hidden">
+                     </button>
+                     <div id="logout-popup" class="hidden popup-menu absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
+                         <div class="py-1">
+                             <div class="px-4 py-2 border-b">
+                                 <p id="popup-user-name" class="text-sm font-semibold text-gray-900 truncate"></p>
+                                 <p id="popup-user-email" class="text-sm text-gray-500 truncate"></p>
+                             </div>
+                             <a href="#" id="popup-logout-btn" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sair</a>
+                         </div>
+                     </div>
+                 </div>
             </div>
         </header>
 
-        <!-- Abas de Navegação de Plataforma -->
-        <div class="border-b border-slate-200 mb-8">
-            <nav id="platform-tabs" class="flex -mb-px">
-                <div class="platform-tab active" data-platform="meta">
-                    <i class="fab fa-meta mr-2"></i> Meta Ads
+        <div id="app" class="p-4 md:p-8 max-w-7xl mx-auto w-full">
+            <header class="mb-6">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                    <div class="w-full md:w-auto">
+                        <h1 class="text-3xl font-extrabold text-slate-900 whitespace-nowrap">Visão Geral</h1>
+                        <p class="text-slate-500 mt-1 whitespace-nowrap">Performance de Campanhas</p>
+                    </div>
+                    <div class="w-full md:w-auto flex items-center justify-end gap-3">
+                        <div id="client-balance-container" class="bg-white p-2 px-4 rounded-lg shadow-sm border min-h-[50px] flex items-center justify-center">
+                        </div>
+                        <button id="refresh-button" class="p-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex-shrink-0 h-[50px] w-[50px]">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="platform-tab" data-platform="google">
-                    <i class="fab fa-google mr-2"></i> Google Ads
+                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div id="date-filters" class="flex flex-wrap gap-1 p-1 bg-slate-200 rounded-full w-fit">
+                        <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all active" data-period="today">Ontem</button>
+                        <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="7">Últimos 7 dias</button>
+                        <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="30">Últimos 30 dias</button>
+                        <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="month">Mês Atual</button>
+                        <button class="date-filter-btn px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 transition-all" data-period="all">Todo o Período</button>
+                    </div>
+                    <button id="gemini-analysis-button" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-2.5 px-5 rounded-full flex items-center justify-center gap-2 shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-wait">
+                        <i class="fas fa-wand-magic-sparkles"></i>
+                        <span>Gerar Análise com IA</span>
+                    </button>
                 </div>
-            </nav>
-        </div>
+            </header>
 
-        <!-- Container de Carregamento Principal -->
-        <div id="loading-container" class="hidden items-center justify-center p-16 flex-col gap-4 text-center">
-            <div class="loader"></div>
-            <p class="text-slate-600 font-semibold text-lg">A buscar dados no Supabase...</p>
-        </div>
-        
-        <!-- Mensagem de Selecione um Cliente -->
-        <div id="select-client-message" class="flex items-center justify-center p-16 flex-col gap-4 text-center text-slate-500">
-             <i class="fas fa-building-user fa-3x mb-4"></i>
-             <h2 class="text-2xl font-bold">Nenhuma empresa selecionada</h2>
-             <p>Por favor, selecione uma empresa no menu acima para começar.</p>
-        </div>
+            <!-- Abas de Navegação de Plataforma -->
+            <div class="border-b border-slate-200 mb-8">
+                <nav id="platform-tabs" class="flex -mb-px">
+                    <div class="platform-tab active" data-platform="meta">
+                        <i class="fab fa-meta mr-2"></i> Meta Ads
+                    </div>
+                    <div class="platform-tab" data-platform="google">
+                        <i class="fab fa-google mr-2"></i> Google Ads
+                    </div>
+                </nav>
+            </div>
 
-        <!-- Conteúdo do Dashboard (META) -->
-        <main id="meta-dashboard-content" class="hidden">
-            <!-- [CORREÇÃO] Wrapper para o conteúdo principal do Meta -->
-            <div id="meta-main-content">
-                <!-- Seção de KPIs (Indicadores Chave de Performance) -->
-                <section id="meta-kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 mb-8">
-                    <!-- Os cards de KPI do Meta serão inseridos aqui -->
-                </section>
+            <!-- Container de Carregamento Principal -->
+            <div id="loading-container" class="hidden items-center justify-center p-16 flex-col gap-4 text-center">
+                <div class="loader"></div>
+                <p class="text-slate-600 font-semibold text-lg">A buscar dados no Supabase...</p>
+            </div>
+            
+            <!-- Mensagem de Selecione um Cliente -->
+            <div id="select-client-message" class="flex items-center justify-center p-16 flex-col gap-4 text-center text-slate-500">
+                 <i class="fas fa-building-user fa-3x mb-4"></i>
+                 <h2 class="text-2xl font-bold">Nenhuma empresa selecionada</h2>
+                 <p>Por favor, pesquise ou selecione uma empresa no menu acima para começar.</p>
+            </div>
 
-                <!-- Seção de Tabela e Gráfico (Layout Vertical) -->
-                <div class="flex flex-col gap-8">
-                    <!-- Tabela de Campanhas -->
-                    <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
-                        <h2 id="meta-table-title" class="text-xl font-bold mb-4 text-slate-900">Detalhes das Campanhas (Meta)</h2>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left text-slate-600">
-                                <thead class="text-xs text-slate-700 uppercase bg-slate-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-4 rounded-l-lg">Campanha</th>
-                                        <th scope="col" class="px-6 py-4">Status</th>
-                                        <th scope="col" class="px-6 py-4 text-right">Gasto</th>
-                                        <th scope="col" class="px-6 py-4 text-right">Cliques</th>
-                                        <th scope="col" class="px-6 py-4 text-right">Msgs. WPP</th>
-                                        <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
-                                        <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="meta-campaigns-table-body"></tbody>
-                            </table>
-                            <div id="meta-no-campaigns-message" class="hidden text-center p-8 text-slate-500">
-                                <!-- Mensagem de "sem atividade" será inserida aqui -->
+            <!-- Conteúdo do Dashboard (META) -->
+            <main id="meta-dashboard-content" class="hidden">
+                <div id="meta-main-content">
+                    <section id="meta-kpi-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6 mb-8"></section>
+                    <div class="flex flex-col gap-8">
+                        <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                            <h2 id="meta-table-title" class="text-xl font-bold mb-4 text-slate-900">Detalhes das Campanhas (Meta)</h2>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left text-slate-600">
+                                    <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-4 rounded-l-lg">Campanha</th>
+                                            <th scope="col" class="px-6 py-4 text-center">Objetivo</th>
+                                            <th scope="col" class="px-6 py-4">Status</th>
+                                            <th scope="col" class="px-6 py-4 text-right">Gasto</th>
+                                            <th scope="col" class="px-6 py-4 text-right">Cliques</th>
+                                            <th scope="col" class="px-6 py-4 text-right">Msgs. WPP</th>
+                                            <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
+                                            <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="meta-campaigns-table-body"></tbody>
+                                </table>
+                                <div id="meta-no-campaigns-message" class="hidden text-center p-8 text-slate-500"></div>
+                            </div>
+                        </div>
+                        <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                            <h2 id="meta-chart-title" class="text-xl font-bold mb-4 text-slate-900">Performance Diária do Cliente (Meta)</h2>
+                            <div class="relative h-96">
+                                 <canvas id="meta-performance-chart"></canvas>
+                                 <div id="meta-no-chart-data-message" class="hidden absolute inset-0 flex items-center justify-center text-center text-slate-500">
+                                     <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                     <p>Sem dados históricos do Meta para o período selecionado.</p>
+                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Gráfico de Histórico -->
-                    <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
-                        <h2 id="meta-chart-title" class="text-xl font-bold mb-4 text-slate-900">Performance Diária do Cliente (Meta)</h2>
-                        <div class="relative h-96">
-                             <canvas id="meta-performance-chart"></canvas>
-                             <div id="meta-no-chart-data-message" class="hidden absolute inset-0 flex items-center justify-center text-center text-slate-500">
-                                 <i class="fas fa-chart-line fa-2x mb-2"></i>
-                                 <p>Sem dados históricos do Meta para o período selecionado.</p>
-                             </div>
-                        </div>
-                    </div>
                 </div>
-            </div>
-            <!-- [CORREÇÃO] Container para a mensagem de "sem dados na plataforma" -->
-            <div id="meta-no-data-container" class="hidden text-center p-16 text-slate-500 bg-white rounded-xl shadow-lg">
-                <i class="fab fa-meta fa-3x mb-4 text-slate-400"></i>
-                <h2 class="text-2xl font-bold">Sem dados de Meta</h2>
-                <p>Este cliente não possui uma conta do Meta Ads cadastrada.</p>
-            </div>
-        </main>
+                <div id="meta-no-data-container" class="hidden text-center p-16 text-slate-500 bg-white rounded-xl shadow-lg">
+                    <i class="fab fa-meta fa-3x mb-4 text-slate-400"></i>
+                    <h2 class="text-2xl font-bold">Sem dados de Meta</h2>
+                    <p>Este cliente não possui uma conta do Meta Ads cadastrada.</p>
+                </div>
+            </main>
 
-        <!-- Conteúdo do Dashboard (GOOGLE) -->
-        <main id="google-dashboard-content" class="hidden">
-            <!-- [CORREÇÃO] Wrapper para o conteúdo principal do Google -->
-            <div id="google-main-content">
-                <!-- Seção de KPIs (Indicadores Chave de Performance) -->
-                <section id="google-kpi-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 mb-8">
-                    <!-- Os cards de KPI do Google serão inseridos aqui -->
-                </section>
-
-                <!-- Seção de Tabela e Gráfico (Layout Vertical) -->
-                <div class="flex flex-col gap-8">
-                    <!-- Tabela de Campanhas -->
-                    <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
-                        <h2 id="google-table-title" class="text-xl font-bold mb-4 text-slate-900">Detalhes das Campanhas (Google)</h2>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left text-slate-600">
-                                <thead class="text-xs text-slate-700 uppercase bg-slate-50">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-4 rounded-l-lg">Campanha</th>
-                                        <th scope="col" class="px-6 py-4">Status</th>
-                                        <th scope="col" class="px-6 py-4 text-right">Custo</th>
-                                        <th scope="col" class="px-6 py-4 text-right">Conversões</th>
-                                        <th scope="col" class="px-6 py-4 text-right">Cliques</th>
-                                        <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
-                                        <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="google-campaigns-table-body"></tbody>
-                            </table>
-                            <div id="google-no-campaigns-message" class="hidden text-center p-8 text-slate-500">
-                                <!-- Mensagem de "sem atividade" será inserida aqui -->
+            <!-- Conteúdo do Dashboard (GOOGLE) -->
+            <main id="google-dashboard-content" class="hidden">
+                <div id="google-main-content">
+                    <section id="google-kpi-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6 mb-8"></section>
+                    <div class="flex flex-col gap-8">
+                        <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                            <h2 id="google-table-title" class="text-xl font-bold mb-4 text-slate-900">Detalhes das Campanhas (Google)</h2>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left text-slate-600">
+                                    <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-4 rounded-l-lg">Campanha</th>
+                                            <th scope="col" class="px-6 py-4">Status</th>
+                                            <th scope="col" class="px-6 py-4 text-right">Custo</th>
+                                            <th scope="col" class="px-6 py-4 text-right">Conversões</th>
+                                            <th scope="col" class="px-6 py-4 text-right">Cliques</th>
+                                            <th scope="col" class="px-6 py-4 text-right">CTR (%)</th>
+                                            <th scope="col" class="px-6 py-4 rounded-r-lg text-right">Impressões</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="google-campaigns-table-body"></tbody>
+                                </table>
+                                <div id="google-no-campaigns-message" class="hidden text-center p-8 text-slate-500"></div>
+                            </div>
+                        </div>
+                        <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
+                            <h2 id="google-chart-title" class="text-xl font-bold mb-4 text-slate-900">Performance Diária do Cliente (Google)</h2>
+                            <div class="relative h-96">
+                                 <canvas id="google-performance-chart"></canvas>
+                                 <div id="google-no-chart-data-message" class="hidden absolute inset-0 flex items-center justify-center text-center text-slate-500">
+                                     <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                     <p>Sem dados históricos do Google para o período selecionado.</p>
+                                 </div>
+                            </div>
+                            <!-- Seletores de métricas para o gráfico do Google -->
+                            <div id="google-chart-metric-selectors" class="flex flex-wrap gap-2 justify-center mt-4">
+                                <!-- Botões serão inseridos aqui -->
                             </div>
                         </div>
                     </div>
-
-                    <!-- Gráfico de Histórico -->
-                    <div class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-slate-100 transition-all">
-                        <h2 id="google-chart-title" class="text-xl font-bold mb-4 text-slate-900">Performance Diária do Cliente (Google)</h2>
-                        <div class="relative h-96">
-                             <canvas id="google-performance-chart"></canvas>
-                             <div id="google-no-chart-data-message" class="hidden absolute inset-0 flex items-center justify-center text-center text-slate-500">
-                                 <i class="fas fa-chart-line fa-2x mb-2"></i>
-                                 <p>Sem dados históricos do Google para o período selecionado.</p>
-                             </div>
-                        </div>
-                    </div>
                 </div>
-            </div>
-            <!-- [CORREÇÃO] Container para a mensagem de "sem dados na plataforma" -->
-            <div id="google-no-data-container" class="hidden text-center p-16 text-slate-500 bg-white rounded-xl shadow-lg">
-                <i class="fab fa-google fa-3x mb-4 text-slate-400"></i>
-                <h2 class="text-2xl font-bold">Sem dados de Google</h2>
-                <p>Este cliente não possui uma conta do Google Ads cadastrada.</p>
-            </div>
-        </main>
-
+                <div id="google-no-data-container" class="hidden text-center p-16 text-slate-500 bg-white rounded-xl shadow-lg">
+                    <i class="fab fa-google fa-3x mb-4 text-slate-400"></i>
+                    <h2 class="text-2xl font-bold">Sem dados de Google</h2>
+                    <p>Este cliente não possui uma conta do Google Ads cadastrada.</p>
+                </div>
+            </main>
+        </div>
     </div>
     
     <!-- Modal de Análise da IA -->
@@ -313,7 +452,7 @@
                  <button id="close-analysis-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </header>
             <div id="analysis-modal-content" class="p-6 overflow-y-auto text-slate-700">
-                 <!-- O conteúdo da análise será inserido aqui -->
+                <!-- O conteúdo da análise será inserido aqui -->
             </div>
             <footer class="p-4 bg-slate-50 border-t flex justify-end gap-3">
                 <button id="copy-analysis-btn" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full font-semibold flex items-center gap-2">
@@ -325,6 +464,11 @@
     </div>
     <!-- Elemento para cópia de texto -->
     <textarea id="copy-helper" class="absolute -left-full"></textarea>
+    
+    <!-- Menu para escolher KPI a ser adicionado -->
+    <div id="kpi-chooser-menu" class="hidden absolute z-30 bg-white rounded-lg border border-slate-200 py-2 w-56">
+        <!-- Itens do menu serão inseridos aqui -->
+    </div>
 
 
     <script type="module">
@@ -337,18 +481,28 @@
         const dbClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- 2. ELEMENTOS DO DOM ---
+        
+        const loginScreen = document.getElementById('login-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const dashboardWrapper = document.getElementById('dashboard-wrapper');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const userMenuContainer = document.getElementById('user-menu-container');
+        const userAvatarBtn = document.getElementById('user-avatar-btn');
+        const logoutPopup = document.getElementById('logout-popup');
+        const popupLogoutBtn = document.getElementById('popup-logout-btn');
 
-        const clientSelect = document.getElementById('client-select');
+        const clientSearchInput = document.getElementById('client-search-input');
+        const clientDropdownToggle = document.getElementById('client-dropdown-toggle');
+        const clientOptionsContainer = document.getElementById('client-options-container');
         const refreshButton = document.getElementById('refresh-button');
         const dateFiltersContainer = document.getElementById('date-filters');
         const loadingContainer = document.getElementById('loading-container');
         const selectClientMessage = document.getElementById('select-client-message');
         const platformTabs = document.getElementById('platform-tabs');
-        
-        // Elementos do Meta
         const metaDashboardContent = document.getElementById('meta-dashboard-content');
-        const metaMainContent = document.getElementById('meta-main-content'); // CORREÇÃO
-        const metaNoDataContainer = document.getElementById('meta-no-data-container'); // CORREÇÃO
+        const metaMainContent = document.getElementById('meta-main-content');
+        const metaNoDataContainer = document.getElementById('meta-no-data-container');
         const metaKpiGrid = document.getElementById('meta-kpi-grid');
         const metaTableTitle = document.getElementById('meta-table-title');
         const metaCampaignsTableBody = document.getElementById('meta-campaigns-table-body');
@@ -356,11 +510,9 @@
         const metaChartTitle = document.getElementById('meta-chart-title');
         const metaPerformanceChartCanvas = document.getElementById('meta-performance-chart');
         const metaNoChartDataMessage = document.getElementById('meta-no-chart-data-message');
-
-        // Elementos do Google
         const googleDashboardContent = document.getElementById('google-dashboard-content');
-        const googleMainContent = document.getElementById('google-main-content'); // CORREÇÃO
-        const googleNoDataContainer = document.getElementById('google-no-data-container'); // CORREÇÃO
+        const googleMainContent = document.getElementById('google-main-content');
+        const googleNoDataContainer = document.getElementById('google-no-data-container');
         const googleKpiGrid = document.getElementById('google-kpi-grid');
         const googleTableTitle = document.getElementById('google-table-title');
         const googleCampaignsTableBody = document.getElementById('google-campaigns-table-body');
@@ -368,8 +520,7 @@
         const googleChartTitle = document.getElementById('google-chart-title');
         const googlePerformanceChartCanvas = document.getElementById('google-performance-chart');
         const googleNoChartDataMessage = document.getElementById('google-no-chart-data-message');
-
-        // Elementos do Modal e IA
+        const googleChartMetricSelectors = document.getElementById('google-chart-metric-selectors');
         const geminiAnalysisButton = document.getElementById('gemini-analysis-button');
         const analysisModal = document.getElementById('analysis-modal');
         const analysisModalContent = document.getElementById('analysis-modal-content');
@@ -377,18 +528,63 @@
         const copyAnalysisButton = document.getElementById('copy-analysis-btn');
         const copyHelper = document.getElementById('copy-helper');
         const clientBalanceContainer = document.getElementById('client-balance-container');
+        const kpiChooserMenu = document.getElementById('kpi-chooser-menu');
 
 
         // --- 3. ESTADO DA APLICAÇÃO ---
 
         let metaPerformanceChart = null; 
         let googlePerformanceChart = null; 
-        let lastAggregatedData = null; // Armazena os últimos dados processados para a IA
-        let clientFullHistory = []; // Armazena todo o histórico do cliente para o período
-        let currentChartCampaignId = null; // Armazena o ID da campanha selecionada para o gráfico
-        let allClients = []; // Armazena todos os clientes (Meta e Google)
-        let selectedClient = null; // Armazena o objeto do cliente selecionado
-        let currentPlatform = 'meta'; // 'meta' ou 'google'
+        let lastAggregatedData = null;
+        let clientFullHistory = [];
+        let currentChartCampaignId = null;
+        let allClients = [];
+        let selectedClient = null;
+        let currentPlatform = 'meta';
+        let currentStartDate = null;
+        let currentEndDate = null;
+        let currentUser = null;
+        let deferredPrompt;
+
+        // Configuração e estado para os KPIs personalizáveis
+        const kpiConfig = {
+            meta: [
+                { key: 'gasto', title: 'Investimento Total', icon: 'fas fa-wallet', description: 'Valor total gasto em todas as campanhas no período.' },
+                { key: 'cliques', title: 'Cliques Totais', icon: 'fas fa-mouse-pointer', description: 'Número total de cliques nos anúncios.' },
+                { key: 'impressoes', title: 'Impressões', icon: 'fas fa-eye', description: 'Número de vezes que os anúncios foram exibidos.' },
+                { key: 'clique_direto_wpp', title: 'Msgs. WhatsApp', icon: 'fab fa-whatsapp', description: 'Cliques que iniciaram uma conversa no WhatsApp.' },
+                { key: 'ctr', title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques (Cliques ÷ Impressões). Indica a relevância do anúncio.' },
+                { key: 'cpm', title: 'CPM Médio', icon: 'fas fa-users', description: 'Custo Por Mil Impressões. Custo para exibir o anúncio 1.000 vezes.' },
+                { key: 'alcance', title: 'Alcance', icon: 'fas fa-user-friends', description: 'Número de pessoas únicas que viram os anúncios.' },
+                { key: 'frequencia', title: 'Frequência', icon: 'fas fa-redo-alt', description: 'Número médio de vezes que cada pessoa viu o anúncio.' }
+            ],
+            google: [
+                { key: 'cost', title: 'Custo Total', icon: 'fas fa-wallet', description: 'Custo total de todas as campanhas do Google Ads no período.' },
+                { key: 'conversions', title: 'Conversões', icon: 'fas fa-bullseye', description: 'Número de ações valiosas concluídas (ex: vendas, leads).' },
+                { key: 'clicks', title: 'Cliques', icon: 'fas fa-hand-pointer', description: 'Número total de cliques nos seus anúncios do Google.' },
+                { key: 'impressions', title: 'Impressões', icon: 'fas fa-eye', description: 'Número de vezes que os anúncios foram exibidos na rede do Google.' },
+                { key: 'ctr', title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques (Cliques ÷ Impressões). Mede a eficácia do anúncio.' },
+                { key: 'cpc', title: 'CPC Médio', icon: 'fas fa-coins', description: 'Custo Por Clique. O valor médio pago por cada clique no anúncio.' },
+                { key: 'cpa', title: 'CPA Médio', icon: 'fas fa-hand-holding-dollar', description: 'Custo Por Aquisição/Conversão. Custo médio por cada conversão.' }
+            ]
+        };
+
+        let kpiState = {
+            meta: { visible: [], hidden: [] },
+            google: { visible: [], hidden: [] }
+        };
+
+        // Estado para as métricas do gráfico do Google
+        let googleChartVisibleMetrics = ['clicks', 'cost', 'impressions'];
+        const googleChartMetricConfig = {
+            cost:        { label: 'Custo',        color: '#059669', yAxisID: 'yCurrency' },
+            conversions: { label: 'Conversões',   color: '#3b82f6', yAxisID: 'yInteger' },
+            clicks:      { label: 'Cliques',      color: '#f59e0b', yAxisID: 'yInteger' },
+            impressions: { label: 'Impressões',   color: '#6366f1', yAxisID: 'yInteger' },
+            ctr:         { label: 'CTR (%)',      color: '#14b8a6', yAxisID: 'yPercent' },
+            cpc:         { label: 'CPC',          color: '#d946ef', yAxisID: 'yCurrency' },
+            cpa:         { label: 'CPA',          color: '#ef4444', yAxisID: 'yCurrency' },
+        };
 
         // --- 4. FUNÇÕES DE FORMATAÇÃO E UTILIDADE ---
 
@@ -396,8 +592,24 @@
         const formatDecimal = (value) => (value || 0).toFixed(2);
         const formatInteger = (value) => (value || 0).toLocaleString('pt-BR');
 
-        const createKpiCard = (title, value, iconClass, description, delay) => `
-            <div class="group relative bg-white p-5 rounded-xl shadow-lg border border-slate-100 flex flex-col justify-between transition-all hover:shadow-xl hover:-translate-y-1 fade-in-up" style="animation-delay: ${delay}ms;">
+        function getObjectiveIcon(objective) {
+            const iconMap = {
+                'OUTCOME_ENGAGEMENT': { icon: 'fa-comments', color: 'text-green-500', title: 'Engajamento/Mensagens' },
+                'OUTCOME_SALES': { icon: 'fa-store', color: 'text-blue-500', title: 'Vendas' },
+                'OUTCOME_LEADS': { icon: 'fa-user-plus', color: 'text-indigo-500', title: 'Leads/Cadastros' },
+                'OUTCOME_AWARENESS': { icon: 'fa-bullhorn', color: 'text-yellow-500', title: 'Reconhecimento' },
+                'LINK_CLICKS': { icon: 'fa-mouse-pointer', color: 'text-sky-500', title: 'Cliques no Link' },
+                'ALCANCE': { icon: 'fa-users', color: 'text-sky-500', title: 'Alcance' } // Mantido por segurança
+            };
+            const details = iconMap[objective] || { icon: 'fa-question-circle', color: 'text-slate-400', title: objective };
+            return `<div class="flex items-center justify-center" title="${details.title}"><i class="fas ${details.icon} ${details.color} fa-lg"></i></div>`;
+        }
+
+        const createKpiCard = (title, value, iconClass, description, delay, kpiKey) => `
+            <div class="group relative bg-white p-5 rounded-xl shadow-lg border border-slate-100 flex flex-col justify-between transition-all hover:shadow-xl hover:-translate-y-1 fade-in-up kpi-card-container" style="animation-delay: ${delay}ms;">
+                <button class="kpi-close-btn absolute top-2 right-2 w-6 h-6 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition-colors z-10" data-kpi-key="${kpiKey}" title="Fechar card">
+                    <i class="fas fa-times fa-xs"></i>
+                </button>
                 <div class="flex items-center gap-3 text-slate-500">
                     <i class="${iconClass} fa-sm"></i>
                     <p class="text-sm font-medium">${title}</p>
@@ -405,19 +617,21 @@
                 <div>
                     <p class="text-3xl font-extrabold text-slate-900 mt-2 break-words">${value}</p>
                 </div>
-                <!-- Tooltip -->
                 <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-lg bg-emerald-800 text-white text-xs shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                     ${description}
                     <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-emerald-800"></div>
                 </div>
             </div>
         `;
+        
+        const createKpiPlaceholderCard = (platform) => `
+            <div class="kpi-placeholder fade-in-up" data-platform="${platform}">
+                <i class="fas fa-plus fa-lg"></i>
+            </div>
+        `;
 
         // --- 5. LÓGICA DE DADOS (FETCH E PROCESSAMENTO) ---
 
-        /**
-         * Busca clientes de ambas as tabelas (Meta e Google), unifica a lista e popula o dropdown.
-         */
         async function fetchAllClients() {
             try {
                 const [metaClientsResponse, googleClientsResponse] = await Promise.all([
@@ -429,8 +643,6 @@
                 if (googleClientsResponse.error) throw googleClientsResponse.error;
 
                 const clientMap = new Map();
-
-                // Processa clientes do Meta
                 metaClientsResponse.data.forEach(client => {
                     if (!clientMap.has(client.nome)) {
                         clientMap.set(client.nome, { name: client.nome, metaId: client.id, googleId: null, saldo: client.saldo });
@@ -440,8 +652,6 @@
                         existing.saldo = client.saldo;
                     }
                 });
-
-                // Processa clientes do Google
                 googleClientsResponse.data.forEach(client => {
                     if (!clientMap.has(client.nome)) {
                         clientMap.set(client.nome, { name: client.nome, metaId: null, googleId: client.id, saldo: null });
@@ -449,32 +659,34 @@
                         clientMap.get(client.nome).googleId = client.id;
                     }
                 });
-
                 allClients = Array.from(clientMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-                populateClientDropdown();
-
             } catch (error) {
                 console.error('Erro ao buscar clientes unificados:', error);
-                clientSelect.innerHTML = '<option>Erro ao carregar empresas</option>';
+                clientSearchInput.placeholder = "Erro ao carregar empresas";
             }
         }
 
-        /**
-         * Popula o menu dropdown com a lista de clientes unificada.
-         */
-        function populateClientDropdown() {
-            clientSelect.innerHTML = '<option value="">Selecione uma empresa...</option>';
-            allClients.forEach(client => {
-                const option = document.createElement('option');
-                option.value = client.name; // Usamos o nome como identificador único no dropdown
-                option.textContent = client.name;
-                clientSelect.appendChild(option);
+        function renderClientOptions(clientsToRender) {
+            clientOptionsContainer.innerHTML = '';
+            if (clientsToRender.length === 0) {
+                clientOptionsContainer.innerHTML = `<div class="p-4 text-center text-slate-500">Nenhuma empresa encontrada.</div>`;
+                return;
+            }
+            clientsToRender.forEach(client => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'client-option-item';
+                optionDiv.dataset.clientName = client.name;
+                const indicators = `
+                    <div class="platform-indicator-container">
+                        ${client.metaId ? '<i class="fab fa-meta text-blue-600" title="Possui conta Meta Ads"></i>' : ''}
+                        ${client.googleId ? '<i class="fab fa-google text-red-600" title="Possui conta Google Ads"></i>' : ''}
+                    </div>
+                `;
+                optionDiv.innerHTML = `${indicators} <span>${client.name}</span>`;
+                clientOptionsContainer.appendChild(optionDiv);
             });
         }
 
-        /**
-         * Função principal que direciona a atualização do dashboard para a plataforma correta.
-         */
         async function updateDashboard() {
             if (!selectedClient) {
                 showInitialMessage();
@@ -508,11 +720,7 @@
             }
         }
 
-        /**
-         * Busca e processa todos os dados relacionados ao Meta Ads.
-         */
         async function fetchAndProcessMetaData() {
-            // [CORREÇÃO] Garante que a área de conteúdo principal esteja visível e a de "sem dados" oculta.
             metaMainContent.classList.remove('hidden');
             metaNoDataContainer.classList.add('hidden');
 
@@ -533,7 +741,6 @@
                 .in('campanha_id', campaigns.map(c => c.id));
             if (allHistoryError) throw allHistoryError;
 
-            // [CORREÇÃO] Lida com o caso de não haver atividade no período.
             if (campaigns.length === 0 || allHistory.length === 0) {
                 showNoActivityForPlatform('meta');
                 return;
@@ -541,6 +748,8 @@
 
             const latestDateStr = allHistory.reduce((max, h) => h.data_relatorio > max ? h.data_relatorio : max, allHistory[0].data_relatorio);
             const { startDate, endDate } = getDateRange(period, latestDateStr);
+            currentStartDate = startDate;
+            currentEndDate = endDate;
             metaTableTitle.textContent = `Detalhes das Campanhas (${activeFilter.textContent})`;
 
             const filteredHistory = allHistory.filter(h => {
@@ -557,14 +766,10 @@
             renderMetaCampaignsTable(aggregatedData.campaignsWithMetrics);
             renderMetaPerformanceChart(aggregatedData.dailyHistory, startDate, endDate);
             metaChartTitle.textContent = 'Performance Diária do Cliente (Meta)';
-            geminiAnalysisButton.disabled = !lastAggregatedData || lastAggregatedData.totals.gasto === 0;
+            geminiAnalysisButton.disabled = !lastAggregatedData || lastAggregatedData.totals.impressoes === 0;
         }
 
-        /**
-         * Busca e processa todos os dados relacionados ao Google Ads.
-         */
         async function fetchAndProcessGoogleData() {
-            // [CORREÇÃO] Garante que a área de conteúdo principal esteja visível e a de "sem dados" oculta.
             googleMainContent.classList.remove('hidden');
             googleNoDataContainer.classList.add('hidden');
 
@@ -572,6 +777,7 @@
             const activeFilter = dateFiltersContainer.querySelector('.active');
             const period = activeFilter.dataset.period;
             currentChartCampaignId = null;
+            googleChartVisibleMetrics = ['clicks', 'cost', 'impressions']; // Reseta para o padrão
 
             const { data: campaigns, error: campaignsError } = await dbClient
                 .from('trafego_campanhas_google')
@@ -585,7 +791,6 @@
                 .in('id_campanha', campaigns.map(c => c.id));
             if (allHistoryError) throw allHistoryError;
 
-            // [CORREÇÃO] Lida com o caso de não haver atividade no período.
             if (campaigns.length === 0 || allHistory.length === 0) {
                 showNoActivityForPlatform('google');
                 return;
@@ -593,6 +798,8 @@
 
             const latestDateStr = allHistory.reduce((max, h) => h.data_relatorio > max ? h.data_relatorio : max, allHistory[0].data_relatorio);
             const { startDate, endDate } = getDateRange(period, latestDateStr);
+            currentStartDate = startDate;
+            currentEndDate = endDate;
             googleTableTitle.textContent = `Detalhes das Campanhas (${activeFilter.textContent})`;
 
             const filteredHistory = allHistory.filter(h => {
@@ -607,14 +814,12 @@
 
             renderGoogleKpiCards(aggregatedData.totals);
             renderGoogleCampaignsTable(aggregatedData.campaignsWithMetrics);
+            renderGoogleMetricSelectors(); 
             renderGooglePerformanceChart(aggregatedData.dailyHistory, startDate, endDate);
             googleChartTitle.textContent = 'Performance Diária do Cliente (Google)';
-            geminiAnalysisButton.disabled = !lastAggregatedData || lastAggregatedData.totals.cost === 0;
+            geminiAnalysisButton.disabled = !lastAggregatedData || lastAggregatedData.totals.impressions === 0;
         }
         
-        /**
-         * Calcula o intervalo de datas com base no período e na data mais recente dos dados.
-         */
         function getDateRange(period, latestDateStr) {
             const referenceDate = latestDateStr ? new Date(latestDateStr) : new Date();
             const endDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate(), 23, 59, 59, 999));
@@ -629,9 +834,6 @@
             return { startDate, endDate };
         }
 
-        /**
-         * Processa os dados brutos do META para agregar totais e agrupar por dia.
-         */
         function processMetaData(campaigns, history) {
             const campaignsWithMetrics = campaigns.map(campaign => {
                 const campaignHistory = history.filter(h => h.campanha_id === campaign.id);
@@ -664,9 +866,6 @@
             return { totals, campaignsWithMetrics, dailyHistory };
         }
 
-        /**
-         * Processa os dados brutos do GOOGLE para agregar totais e agrupar por dia.
-         */
         function processGoogleData(campaigns, history) {
             const campaignsWithMetrics = campaigns.map(campaign => {
                 const campaignHistory = history.filter(h => h.id_campanha === campaign.id);
@@ -693,17 +892,23 @@
             totals.ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
             totals.cpa = totals.conversions > 0 ? totals.cost / totals.conversions : 0;
 
-            const dailyHistory = aggregateDailyHistory(history, [
+            let dailyHistory = aggregateDailyHistory(history, [
                 { key: 'cost', transform: v => Number(v.cost) || 0 },
                 { key: 'conversions', transform: v => Number(v.conversions) || 0 },
-                { key: 'clicks', transform: v => Number(v.clicks) || 0 }
+                { key: 'clicks', transform: v => Number(v.clicks) || 0 },
+                { key: 'impressions', transform: v => Number(v.impressions) || 0 }
             ]);
+
+            dailyHistory = dailyHistory.map(day => {
+                const ctr = day.impressions > 0 ? (day.clicks / day.impressions) * 100 : 0;
+                const cpc = day.clicks > 0 ? day.cost / day.clicks : 0;
+                const cpa = day.conversions > 0 ? day.cost / day.conversions : 0;
+                return { ...day, ctr, cpc, cpa };
+            });
+
             return { totals, campaignsWithMetrics, dailyHistory };
         }
 
-        /**
-         * Função genérica para agregar dados diários.
-         */
         function aggregateDailyHistory(history, metricsToSum) {
             const dailyHistoryMap = new Map();
             history.forEach(item => {
@@ -748,7 +953,6 @@
                 const contentToShow = currentPlatform === 'meta' ? metaDashboardContent : googleDashboardContent;
                 contentToShow.classList.remove('hidden');
             }
-            geminiAnalysisButton.disabled = true;
         }
 
         function showInitialMessage() {
@@ -760,7 +964,6 @@
             clientBalanceContainer.innerHTML = '';
         }
 
-        // [CORREÇÃO] Função não-destrutiva para quando o cliente não tem dados na plataforma.
         function showNoDataForPlatform(platformName) {
             if (platformName === 'Meta') {
                 metaMainContent.classList.add('hidden');
@@ -770,30 +973,24 @@
                 googleNoDataContainer.classList.remove('hidden');
             }
             lastAggregatedData = null;
-            geminiAnalysisButton.disabled = true;
         }
 
-        // [NOVA FUNÇÃO] Para lidar com a ausência de atividade no período.
         function showNoActivityForPlatform(platform) {
-            if (platform === 'meta') {
-                metaKpiGrid.innerHTML = '';
-                metaCampaignsTableBody.innerHTML = '';
-                metaNoCampaignsMessage.innerHTML = `<div class="text-center p-8 text-slate-500"><i class="fas fa-folder-open fa-2x mb-2"></i><p>Nenhuma campanha ou atividade do Meta encontrada para este cliente no período.</p></div>`;
-                metaNoCampaignsMessage.classList.remove('hidden');
-                if (metaPerformanceChart) metaPerformanceChart.destroy();
-                metaNoChartDataMessage.classList.remove('hidden');
-            } else { // google
-                googleKpiGrid.innerHTML = '';
-                googleCampaignsTableBody.innerHTML = '';
-                googleNoCampaignsMessage.innerHTML = `<div class="text-center p-8 text-slate-500"><i class="fas fa-folder-open fa-2x mb-2"></i><p>Nenhuma campanha ou atividade do Google encontrada para este cliente no período.</p></div>`;
-                googleNoCampaignsMessage.classList.remove('hidden');
-                if (googlePerformanceChart) googlePerformanceChart.destroy();
-                googleNoChartDataMessage.classList.remove('hidden');
-            }
+            const grid = platform === 'meta' ? metaKpiGrid : googleKpiGrid;
+            const tableBody = platform === 'meta' ? metaCampaignsTableBody : googleCampaignsTableBody;
+            const noCampaignsMsg = platform === 'meta' ? metaNoCampaignsMessage : googleNoCampaignsMessage;
+            const chart = platform === 'meta' ? metaPerformanceChart : googlePerformanceChart;
+            const noChartMsg = platform === 'meta' ? metaNoChartDataMessage : googleNoChartDataMessage;
+            
+            grid.innerHTML = '';
+            tableBody.innerHTML = '';
+            noCampaignsMsg.innerHTML = `<div class="text-center p-8 text-slate-500"><i class="fas fa-folder-open fa-2x mb-2"></i><p>Nenhuma campanha ou atividade do ${platform === 'meta' ? 'Meta' : 'Google'} encontrada para este cliente no período.</p></div>`;
+            noCampaignsMsg.classList.remove('hidden');
+            if (chart) chart.destroy();
+            noChartMsg.classList.remove('hidden');
+            if (platform === 'google') googleChartMetricSelectors.innerHTML = '';
             lastAggregatedData = null;
-            geminiAnalysisButton.disabled = true;
         }
-
 
         function renderClientBalance() {
             if (!selectedClient) {
@@ -817,40 +1014,63 @@
             }
         }
 
-        // Funções de Renderização para META
+        function formatKpiValue(key, totals) {
+            const value = totals[key];
+            if (['gasto', 'cpm', 'cost', 'cpc', 'cpa'].includes(key)) {
+                return formatCurrency(value);
+            }
+            if (['ctr'].includes(key)) {
+                return `${formatDecimal(value)}%`;
+            }
+            if (['frequencia'].includes(key)) {
+                return formatDecimal(value);
+            }
+            return formatInteger(value);
+        }
+        
         function renderMetaKpiCards(totals) {
-            const kpiInfo = {
-                gasto: { title: 'Investimento Total', icon: 'fas fa-wallet', description: 'Valor total gasto em todas as campanhas no período.' },
-                cliques: { title: 'Cliques Totais', icon: 'fas fa-mouse-pointer', description: 'Número total de cliques nos anúncios.' },
-                impressoes: { title: 'Impressões', icon: 'fas fa-eye', description: 'Número de vezes que os anúncios foram exibidos.' },
-                clique_direto_wpp: { title: 'Msgs. WhatsApp', icon: 'fab fa-whatsapp', description: 'Cliques que iniciaram uma conversa no WhatsApp.' },
-                ctr: { title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques (Cliques ÷ Impressões). Indica a relevância do anúncio.' },
-                cpm: { title: 'CPM Médio', icon: 'fas fa-users', description: 'Custo Por Mil Impressões. Custo para exibir o anúncio 1.000 vezes.' },
-                alcance: { title: 'Alcance', icon: 'fas fa-user-friends', description: 'Número de pessoas únicas que viram os anúncios.' },
-                frequencia: { title: 'Frequência', icon: 'fas fa-redo-alt', description: 'Número médio de vezes que cada pessoa viu o anúncio.' }
-            };
-            metaKpiGrid.innerHTML = `
-                ${createKpiCard(kpiInfo.gasto.title, formatCurrency(totals.gasto), kpiInfo.gasto.icon, kpiInfo.gasto.description, 0)}
-                ${createKpiCard(kpiInfo.cliques.title, formatInteger(totals.cliques), kpiInfo.cliques.icon, kpiInfo.cliques.description, 50)}
-                ${createKpiCard(kpiInfo.impressoes.title, formatInteger(totals.impressoes), kpiInfo.impressoes.icon, kpiInfo.impressoes.description, 100)}
-                ${createKpiCard(kpiInfo.clique_direto_wpp.title, formatInteger(totals.clique_direto_wpp), kpiInfo.clique_direto_wpp.icon, kpiInfo.clique_direto_wpp.description, 150)}
-                ${createKpiCard(kpiInfo.ctr.title, `${formatDecimal(totals.ctr)}%`, kpiInfo.ctr.icon, kpiInfo.ctr.description, 200)}
-                ${createKpiCard(kpiInfo.cpm.title, formatCurrency(totals.cpm), kpiInfo.cpm.icon, kpiInfo.cpm.description, 250)}
-                ${createKpiCard(kpiInfo.alcance.title, formatInteger(totals.alcance), kpiInfo.alcance.icon, kpiInfo.alcance.description, 300)}
-                ${createKpiCard(kpiInfo.frequencia.title, formatDecimal(totals.frequencia), kpiInfo.frequencia.icon, kpiInfo.frequencia.description, 350)}
-            `;
+            metaKpiGrid.innerHTML = '';
+            kpiState.meta.visible.forEach((key, index) => {
+                const kpiInfo = kpiConfig.meta.find(k => k.key === key);
+                if (kpiInfo) {
+                    const value = formatKpiValue(key, totals);
+                    metaKpiGrid.innerHTML += createKpiCard(kpiInfo.title, value, kpiInfo.icon, kpiInfo.description, index * 50, key);
+                }
+            });
+            kpiState.meta.hidden.forEach(() => {
+                metaKpiGrid.innerHTML += createKpiPlaceholderCard('meta');
+            });
+        }
+
+        function renderGoogleKpiCards(totals) {
+            googleKpiGrid.innerHTML = '';
+            const visibleCards = kpiConfig.google.filter(k => kpiState.google.visible.includes(k.key));
+            
+            visibleCards.forEach((kpiInfo, index) => {
+                 const value = formatKpiValue(kpiInfo.key, totals);
+                 googleKpiGrid.innerHTML += createKpiCard(kpiInfo.title, value, kpiInfo.icon, kpiInfo.description, index * 50, kpiInfo.key);
+            });
+             
+            if (visibleCards.length === 7) {
+                 googleKpiGrid.innerHTML += `<div class="bg-transparent"></div>`;
+            }
+
+            kpiState.google.hidden.forEach(() => {
+                googleKpiGrid.innerHTML += createKpiPlaceholderCard('google');
+            });
         }
 
         function renderMetaCampaignsTable(campaignsData) {
             metaNoCampaignsMessage.classList.add('hidden');
             const activeCampaigns = campaignsData.filter(c => c.gasto > 0);
             if (activeCampaigns.length === 0) {
-                metaCampaignsTableBody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">Nenhuma campanha do Meta teve atividade no período.</td></tr>`;
+                metaCampaignsTableBody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-slate-500">Nenhuma campanha do Meta teve atividade no período.</td></tr>`;
                 return;
             }
             metaCampaignsTableBody.innerHTML = activeCampaigns.map(c => `
-                <tr class="campaign-row bg-white border-b hover:bg-slate-50 transition-colors" data-campaign-id="${c.id}" data-campaign-name="${c.nome}">
+                <tr class="campaign-row bg-white border-b hover:bg-slate-50 transition-colors border-l-4 border-blue-500" data-campaign-id="${c.id}" data-campaign-name="${c.nome}">
                     <th scope="row" class="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">${c.nome}</th>
+                    <td class="px-6 py-4">${getObjectiveIcon(c.objetivo)}</td>
                     <td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${c.status_campanha === 'ATIVA' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}">${c.status_campanha}</span></td>
                     <td class="px-6 py-4 text-right">${formatCurrency(c.gasto)}</td>
                     <td class="px-6 py-4 text-right">${formatInteger(c.cliques)}</td>
@@ -858,47 +1078,6 @@
                     <td class="px-6 py-4 text-right">${formatDecimal(c.ctr)}%</td>
                     <td class="px-6 py-4 text-right">${formatInteger(c.impressoes)}</td>
                 </tr>`).join('');
-        }
-
-        function renderMetaPerformanceChart(dailyHistory, startDate, endDate) {
-            if (!dailyHistory || dailyHistory.length === 0) {
-                metaNoChartDataMessage.classList.remove('hidden');
-                if (metaPerformanceChart) metaPerformanceChart.destroy();
-                return;
-            }
-            metaNoChartDataMessage.classList.add('hidden');
-            const chartConfig = createChartConfig(
-                dailyHistory.map(h => h.date),
-                { label: 'Gasto (R$)', data: dailyHistory.map(h => h.gasto), yAxisID: 'y', type: 'line', color: '#10b981' },
-                { label: 'Cliques', data: dailyHistory.map(h => h.cliques), yAxisID: 'y1', type: 'bar', color: '#f59e0b' },
-                startDate,
-                endDate
-            );
-            if (metaPerformanceChart) metaPerformanceChart.destroy();
-            metaPerformanceChart = new Chart(metaPerformanceChartCanvas, chartConfig);
-        }
-
-        // Funções de Renderização para GOOGLE
-        function renderGoogleKpiCards(totals) {
-            const kpiInfo = {
-                cost: { title: 'Custo Total', icon: 'fas fa-wallet', description: 'Custo total de todas as campanhas do Google Ads no período.' },
-                conversions: { title: 'Conversões', icon: 'fas fa-bullseye', description: 'Número de ações valiosas concluídas (ex: vendas, leads).' },
-                clicks: { title: 'Cliques', icon: 'fas fa-hand-pointer', description: 'Número total de cliques nos seus anúncios do Google.' },
-                impressions: { title: 'Impressões', icon: 'fas fa-eye', description: 'Número de vezes que os anúncios foram exibidos na rede do Google.' },
-                ctr: { title: 'CTR Médio', icon: 'fas fa-chart-pie', description: 'Taxa de Cliques (Cliques ÷ Impressões). Mede a eficácia do anúncio.' },
-                cpc: { title: 'CPC Médio', icon: 'fas fa-coins', description: 'Custo Por Clique. O valor médio pago por cada clique no anúncio.' },
-                cpa: { title: 'CPA Médio', icon: 'fas fa-hand-holding-dollar', description: 'Custo Por Aquisição/Conversão. Custo médio por cada conversão.' }
-            };
-            googleKpiGrid.innerHTML = `
-                ${createKpiCard(kpiInfo.cost.title, formatCurrency(totals.cost), kpiInfo.cost.icon, kpiInfo.cost.description, 0)}
-                ${createKpiCard(kpiInfo.conversions.title, formatInteger(totals.conversions), kpiInfo.conversions.icon, kpiInfo.conversions.description, 50)}
-                ${createKpiCard(kpiInfo.clicks.title, formatInteger(totals.clicks), kpiInfo.clicks.icon, kpiInfo.clicks.description, 100)}
-                ${createKpiCard(kpiInfo.impressions.title, formatInteger(totals.impressions), kpiInfo.impressions.icon, kpiInfo.impressions.description, 150)}
-                ${createKpiCard(kpiInfo.ctr.title, `${formatDecimal(totals.ctr)}%`, kpiInfo.ctr.icon, kpiInfo.ctr.description, 200)}
-                ${createKpiCard(kpiInfo.cpc.title, formatCurrency(totals.cpc), kpiInfo.cpc.icon, kpiInfo.cpc.description, 250)}
-                ${createKpiCard(kpiInfo.cpa.title, formatCurrency(totals.cpa), kpiInfo.cpa.icon, kpiInfo.cpa.description, 300)}
-                <div class="bg-transparent"></div> <!-- Placeholder -->
-            `;
         }
 
         function renderGoogleCampaignsTable(campaignsData) {
@@ -909,7 +1088,7 @@
                 return;
             }
             googleCampaignsTableBody.innerHTML = activeCampaigns.map(c => `
-                <tr class="campaign-row bg-white border-b hover:bg-slate-50 transition-colors" data-campaign-id="${c.id}" data-campaign-name="${c.nome_campanha}">
+                <tr class="campaign-row bg-white border-b hover:bg-slate-50 transition-colors border-l-4 border-yellow-400" data-campaign-id="${c.id}" data-campaign-name="${c.nome_campanha}">
                     <th scope="row" class="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">${c.nome_campanha}</th>
                     <td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full ${c.status === 'ENABLED' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}">${c.status}</span></td>
                     <td class="px-6 py-4 text-right">${formatCurrency(c.cost)}</td>
@@ -920,6 +1099,77 @@
                 </tr>`).join('');
         }
 
+        function renderMetaPerformanceChart(dailyHistory, startDate, endDate) {
+            if (!dailyHistory || dailyHistory.length === 0) {
+                metaNoChartDataMessage.classList.remove('hidden');
+                if (metaPerformanceChart) metaPerformanceChart.destroy();
+                return;
+            }
+            metaNoChartDataMessage.classList.add('hidden');
+
+            const datasets = [
+                {
+                    label: 'Gasto (R$)',
+                    data: dailyHistory.map(h => h.gasto),
+                    yAxisID: 'yCurrency',
+                    type: 'line',
+                    borderColor: '#10b981',
+                    backgroundColor: (context) => {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return null;
+                        const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                        gradient.addColorStop(0, '#10b981' + '00');
+                        gradient.addColorStop(1, '#10b981' + '4D');
+                        return gradient;
+                    },
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Cliques',
+                    data: dailyHistory.map(h => h.cliques),
+                    yAxisID: 'yInteger',
+                    type: 'bar',
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#f59e0b'
+                }
+            ];
+
+            const chartConfig = createChartConfig(
+                dailyHistory.map(h => h.date),
+                datasets,
+                startDate,
+                endDate
+            );
+
+            const visibleYAxes = new Set(datasets.map(d => d.yAxisID));
+            Object.keys(chartConfig.options.scales).forEach(key => {
+                if (key.startsWith('y')) {
+                    chartConfig.options.scales[key].display = visibleYAxes.has(key);
+                }
+            });
+
+            if (metaPerformanceChart) metaPerformanceChart.destroy();
+            metaPerformanceChart = new Chart(metaPerformanceChartCanvas, chartConfig);
+        }
+
+        function renderGoogleMetricSelectors() {
+            googleChartMetricSelectors.innerHTML = '';
+            Object.keys(googleChartMetricConfig).forEach(key => {
+                const config = googleChartMetricConfig[key];
+                const isActive = googleChartVisibleMetrics.includes(key);
+                const button = document.createElement('button');
+                button.className = `metric-selector-btn px-3 py-1.5 text-sm font-medium rounded-full flex items-center gap-2 ${isActive ? 'active' : ''}`;
+                button.dataset.metric = key;
+                button.innerHTML = `
+                    <div class="color-dot" style="background-color: ${config.color};"></div>
+                    <span>${config.label}</span>
+                `;
+                googleChartMetricSelectors.appendChild(button);
+            });
+        }
+
         function renderGooglePerformanceChart(dailyHistory, startDate, endDate) {
             if (!dailyHistory || dailyHistory.length === 0) {
                 googleNoChartDataMessage.classList.remove('hidden');
@@ -927,58 +1177,87 @@
                 return;
             }
             googleNoChartDataMessage.classList.add('hidden');
+
+            const datasets = googleChartVisibleMetrics.map(key => {
+                const config = googleChartMetricConfig[key];
+                return {
+                    label: config.label,
+                    data: dailyHistory.map(h => h[key] || 0),
+                    yAxisID: config.yAxisID,
+                    borderColor: config.color,
+                    backgroundColor: (context) => {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return null;
+                        const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                        gradient.addColorStop(0, config.color + '00');
+                        gradient.addColorStop(1, config.color + '33');
+                        return gradient;
+                    },
+                    type: 'line',
+                    tension: 0.4,
+                    fill: true,
+                };
+            });
+
             const chartConfig = createChartConfig(
                 dailyHistory.map(h => h.date),
-                { label: 'Custo (R$)', data: dailyHistory.map(h => h.cost), yAxisID: 'y', type: 'line', color: '#4285F4' }, // Google Blue
-                { label: 'Conversões', data: dailyHistory.map(h => h.conversions), yAxisID: 'y1', type: 'bar', color: '#34A853' }, // Google Green
+                datasets,
                 startDate,
                 endDate
             );
+
+            const visibleYAxes = new Set(datasets.map(d => d.yAxisID));
+            Object.keys(chartConfig.options.scales).forEach(key => {
+                if (key.startsWith('y')) {
+                    chartConfig.options.scales[key].display = visibleYAxes.has(key);
+                }
+            });
+
             if (googlePerformanceChart) googlePerformanceChart.destroy();
             googlePerformanceChart = new Chart(googlePerformanceChartCanvas, chartConfig);
         }
 
-        /**
-         * Função genérica para criar a configuração de um gráfico.
-         */
-        function createChartConfig(labels, dataset1, dataset2, startDate, endDate) {
-            const createGradient = (ctx, color) => {
-                const gradient = ctx.createLinearGradient(0, 0, 0, 350);
-                const rgbColor = color.startsWith('#') ? `${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}` : '16, 185, 129';
-                gradient.addColorStop(0, `rgba(${rgbColor}, 0.5)`);
-                gradient.addColorStop(1, `rgba(${rgbColor}, 0)`);
-                return gradient;
-            };
-
+        function createChartConfig(labels, datasets, startDate, endDate) {
             return {
-                type: 'bar',
+                type: 'bar', // Tipo base para suportar gráficos mistos
                 data: {
                     labels: labels,
-                    datasets: [
-                        { ...dataset1, backgroundColor: (context) => createGradient(context.chart.ctx, dataset1.color), borderColor: dataset1.color, tension: 0.4, fill: true, pointRadius: 0, pointHoverRadius: 6, pointHoverBorderColor: 'white', pointHoverBorderWidth: 2, borderWidth: 2.5 },
-                        { ...dataset2, backgroundColor: dataset2.color, borderColor: dataset2.color, borderWidth: 1, borderRadius: 6, barPercentage: 0.7 }
-                    ]
+                    datasets: datasets.map(ds => ({
+                        pointRadius: 2,
+                        pointHoverRadius: 6,
+                        pointHoverBorderColor: 'white',
+                        pointHoverBorderWidth: 2,
+                        borderWidth: 2.5,
+                        ...ds
+                    }))
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: 'easeInOutQuart' },
                     interaction: { mode: 'index', intersect: false },
                     scales: {
                         x: { type: 'time', time: { unit: 'day', tooltipFormat: 'dd/MM/yyyy' }, grid: { display: false }, ticks: { color: '#64748b' }, min: startDate?.toISOString().split('T')[0], max: endDate?.toISOString().split('T')[0] },
-                        y: { type: 'linear', display: true, position: 'left', grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } },
-                        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#64748b' } },
+                        yCurrency: { type: 'linear', display: false, position: 'left', grid: { color: '#e2e8f0' }, ticks: { color: '#64748b', callback: value => formatCurrency(value) } },
+                        yInteger: { type: 'linear', display: false, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#64748b', callback: value => formatInteger(value) } },
+                        yPercent: { type: 'linear', display: false, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#64748b', callback: value => `${formatDecimal(value)}%` } },
                     },
                     plugins: {
-                        legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, color: '#475569' } },
-                        tooltip: { backgroundColor: '#1e293b', titleFont: { weight: 'bold' }, bodySpacing: 4, padding: 12, callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) label += ': ';
-                                if (context.parsed.y !== null) {
-                                    label += context.dataset.yAxisID === 'y' ? formatCurrency(context.parsed.y) : formatInteger(context.parsed.y);
+                        legend: { display: false },
+                        tooltip: { 
+                            backgroundColor: '#1e293b', titleFont: { weight: 'bold' }, bodySpacing: 4, padding: 12, 
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        if (context.dataset.yAxisID === 'yCurrency') label += formatCurrency(context.parsed.y);
+                                        else if (context.dataset.yAxisID === 'yPercent') label += `${formatDecimal(context.parsed.y)}%`;
+                                        else label += formatInteger(context.parsed.y);
+                                    }
+                                    return label;
                                 }
-                                return label;
                             }
-                        }}
+                        }
                     }
                 },
             };
@@ -988,9 +1267,11 @@
         // --- 7. LÓGICA DA ANÁLISE COM IA (GEMINI) E INTERATIVIDADE ---
         
         async function handleGenerateAnalysis() {
-            if (!lastAggregatedData) {
-                // Não use alert, pois pode ser bloqueado. Considere um modal de erro no futuro.
-                console.warn("Não há dados carregados para análise.");
+            if (!lastAggregatedData || 
+                (lastAggregatedData.platform === 'meta' && lastAggregatedData.totals.impressoes === 0) ||
+                (lastAggregatedData.platform === 'google' && lastAggregatedData.totals.impressions === 0)
+            ) {
+                showToast("Não há dados suficientes para gerar uma análise neste período.");
                 return;
             }
             
@@ -1090,11 +1371,46 @@
 
 
         // --- 8. EVENT LISTENERS E INICIALIZAÇÃO DA APLICAÇÃO ---
+        
+        function initializeKpiStates() {
+            kpiState.meta.visible = kpiConfig.meta.map(k => k.key);
+            kpiState.meta.hidden = [];
+            kpiState.google.visible = kpiConfig.google.map(k => k.key);
+            kpiState.google.hidden = [];
+        }
 
-        clientSelect.addEventListener('change', () => {
-            const clientName = clientSelect.value;
-            selectedClient = allClients.find(c => c.name === clientName) || null;
-            updateDashboard();
+        clientSearchInput.addEventListener('input', () => {
+            const searchTerm = clientSearchInput.value.toLowerCase();
+            if (searchTerm.length >= 3) {
+                const filtered = allClients.filter(c => c.name.toLowerCase().includes(searchTerm));
+                renderClientOptions(filtered);
+                clientOptionsContainer.classList.remove('hidden');
+            } else {
+                clientOptionsContainer.classList.add('hidden');
+            }
+        });
+
+        clientDropdownToggle.addEventListener('click', () => {
+            const isHidden = clientOptionsContainer.classList.contains('hidden');
+            if (isHidden) {
+                renderClientOptions(allClients);
+                clientOptionsContainer.classList.remove('hidden');
+            } else {
+                clientOptionsContainer.classList.add('hidden');
+            }
+        });
+
+        clientOptionsContainer.addEventListener('click', (event) => {
+            const optionItem = event.target.closest('.client-option-item');
+            if (optionItem) {
+                const clientName = optionItem.dataset.clientName;
+                selectedClient = allClients.find(c => c.name === clientName) || null;
+                clientSearchInput.value = clientName;
+                clientOptionsContainer.classList.add('hidden');
+                initializeKpiStates();
+                geminiAnalysisButton.disabled = !selectedClient;
+                updateDashboard();
+            }
         });
 
         platformTabs.addEventListener('click', (event) => {
@@ -1103,16 +1419,16 @@
                 platformTabs.querySelector('.active').classList.remove('active');
                 tab.classList.add('active');
                 currentPlatform = tab.dataset.platform;
-                
-                // Esconde ambos os painéis antes de decidir qual mostrar
                 metaDashboardContent.classList.add('hidden');
                 googleDashboardContent.classList.add('hidden');
-
-                updateDashboard(); // Recarrega os dados para a nova plataforma
+                updateDashboard();
             }
         });
 
-        refreshButton.addEventListener('click', updateDashboard);
+        refreshButton.addEventListener('click', () => {
+            initializeKpiStates();
+            updateDashboard();
+        });
 
         dateFiltersContainer.addEventListener('click', (event) => {
             if (event.target.tagName === 'BUTTON') {
@@ -1122,7 +1438,6 @@
             }
         });
 
-        // Listeners do modal de análise
         geminiAnalysisButton.addEventListener('click', handleGenerateAnalysis);
         closeAnalysisModalButton.addEventListener('click', () => analysisModal.classList.add('hidden'));
         analysisModal.addEventListener('click', (event) => {
@@ -1136,9 +1451,210 @@
             setTimeout(() => { copyAnalysisButton.querySelector('span').textContent = 'Copiar'; }, 2000);
         });
 
+        function handleKpiGridClick(event) {
+            const platform = event.currentTarget.id.includes('meta') ? 'meta' : 'google';
+            
+            const closeBtn = event.target.closest('.kpi-close-btn');
+            if (closeBtn) {
+                const kpiKey = closeBtn.dataset.kpiKey;
+                const index = kpiState[platform].visible.indexOf(kpiKey);
+                if (index > -1) {
+                    kpiState[platform].visible.splice(index, 1);
+                    kpiState[platform].hidden.push(kpiKey);
+                    if (platform === 'meta') renderMetaKpiCards(lastAggregatedData.totals);
+                    else renderGoogleKpiCards(lastAggregatedData.totals);
+                }
+                return;
+            }
+
+            const placeholder = event.target.closest('.kpi-placeholder');
+            if (placeholder) {
+                openKpiChooser(placeholder, platform);
+            }
+        }
+        
+        metaKpiGrid.addEventListener('click', handleKpiGridClick);
+        googleKpiGrid.addEventListener('click', handleKpiGridClick);
+
+        function openKpiChooser(targetElement, platform) {
+            const hiddenKpis = kpiState[platform].hidden;
+            if (hiddenKpis.length === 0) return;
+
+            kpiChooserMenu.innerHTML = '';
+            kpiChooserMenu.dataset.platform = platform;
+
+            const allPlatformKpis = kpiConfig[platform];
+            hiddenKpis.forEach(key => {
+                const kpiInfo = allPlatformKpis.find(k => k.key === key);
+                if (kpiInfo) {
+                    const item = document.createElement('div');
+                    item.className = 'px-4 py-2 hover:bg-slate-100 cursor-pointer text-sm';
+                    item.textContent = kpiInfo.title;
+                    item.dataset.kpiKey = key;
+                    kpiChooserMenu.appendChild(item);
+                }
+            });
+
+            const rect = targetElement.getBoundingClientRect();
+            kpiChooserMenu.style.top = `${rect.bottom + window.scrollY}px`;
+            kpiChooserMenu.style.left = `${rect.left + window.scrollX}px`;
+            kpiChooserMenu.classList.remove('hidden');
+        }
+
+        kpiChooserMenu.addEventListener('click', event => {
+            const kpiKey = event.target.dataset.kpiKey;
+            const platform = kpiChooserMenu.dataset.platform;
+            if (kpiKey && platform) {
+                const index = kpiState[platform].hidden.indexOf(kpiKey);
+                if (index > -1) {
+                    kpiState[platform].hidden.splice(index, 1);
+                    kpiState[platform].visible.push(kpiKey);
+                    if (platform === 'meta') renderMetaKpiCards(lastAggregatedData.totals);
+                    else renderGoogleKpiCards(lastAggregatedData.totals);
+                }
+                kpiChooserMenu.classList.add('hidden');
+            }
+        });
+
+        googleChartMetricSelectors.addEventListener('click', (event) => {
+            const button = event.target.closest('.metric-selector-btn');
+            if (!button) return;
+
+            const metric = button.dataset.metric;
+            button.classList.toggle('active');
+
+            const index = googleChartVisibleMetrics.indexOf(metric);
+            if (index > -1) {
+                googleChartVisibleMetrics.splice(index, 1);
+            } else {
+                googleChartVisibleMetrics.push(metric);
+            }
+            
+            renderGooglePerformanceChart(lastAggregatedData.dailyHistory, currentStartDate, currentEndDate);
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!clientSearchInput.contains(event.target) && !clientOptionsContainer.contains(event.target) && !clientDropdownToggle.contains(event.target)) {
+                clientOptionsContainer.classList.add('hidden');
+            }
+            if (!kpiChooserMenu.contains(event.target) && !event.target.closest('.kpi-placeholder')) {
+                kpiChooserMenu.classList.add('hidden');
+            }
+        });
+
+        // --- LÓGICA DE AUTENTICAÇÃO E INICIALIZAÇÃO ---
+        function showApp(isInitialLoad = false) {
+            if (isInitialLoad) {
+                loginScreen.classList.add('hidden');
+                loadingScreen.classList.remove('hidden');
+            }
+            
+            userAvatarBtn.innerHTML = '';
+            const userInitial = currentUser.nome_usuario ? currentUser.nome_usuario.charAt(0).toUpperCase() : '?';
+            const fallback = document.createElement('span');
+            fallback.className = 'text-lg';
+            fallback.textContent = userInitial;
+            
+            if (currentUser.foto_url) {
+                const img = document.createElement('img');
+                img.src = currentUser.foto_url;
+                img.className = 'w-full h-full rounded-full object-cover';
+                img.alt = 'Avatar';
+                img.onerror = () => { userAvatarBtn.innerHTML = ''; userAvatarBtn.appendChild(fallback); };
+                userAvatarBtn.appendChild(img);
+            } else {
+                userAvatarBtn.appendChild(fallback);
+            }
+            
+            document.getElementById('popup-user-name').textContent = currentUser.nome_usuario;
+            document.getElementById('popup-user-email').textContent = currentUser.email;
+            
+            fetchAllClients().then(() => {
+                loadingScreen.classList.add('hidden');
+                dashboardWrapper.classList.remove('hidden');
+                showInitialMessage();
+            });
+        }
+
+        function showLogin() {
+            localStorage.removeItem('dashboardUser');
+            currentUser = null;
+            dashboardWrapper.classList.add('hidden');
+            loadingScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const telefone = document.getElementById('telefone').value;
+            loginError.classList.add('hidden');
+            try {
+                const { data, error } = await dbClient.from('usuarios').select('*').eq('email', email).eq('telefone', telefone).single();
+                if (error) throw new Error('Credenciais inválidas ou usuário não encontrado.');
+                if (data) {
+                    currentUser = data;
+                    localStorage.setItem('dashboardUser', JSON.stringify(currentUser));
+                    showApp(true);
+                } else {
+                    throw new Error('Credenciais inválidas.');
+                }
+            } catch (err) {
+                loginError.textContent = err.message;
+                loginError.classList.remove('hidden');
+            }
+        });
+        
+        function setupUserMenu() {
+            userAvatarBtn.addEventListener('click', () => logoutPopup.classList.toggle('hidden'));
+            popupLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); logoutPopup.classList.add('hidden'); showLogin(); });
+            document.addEventListener('click', (e) => {
+                if (!userMenuContainer.contains(e.target)) logoutPopup.classList.add('hidden');
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            fetchAllClients();
-            showInitialMessage();
+            const manifest = {
+                "name": "Dashboard de Performance Avançado",
+                "short_name": "Dashboard",
+                "start_url": ".",
+                "display": "standalone",
+                "background_color": "#f0f2f5",
+                "theme_color": "#059669",
+                "description": "Um dashboard avançado para análise de performance de campanhas de marketing.",
+                "icons": [
+                    { "src": "https://raw.githubusercontent.com/nattanlima/meu-crm-pwa/main/icons/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+                    { "src": "https://raw.githubusercontent.com/nattanlima/meu-crm-pwa/main/icons/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
+                ]
+            };
+            const manifestURL = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+            document.querySelector('link[rel="manifest"]').href = manifestURL;
+
+            const savedUser = localStorage.getItem('dashboardUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showApp(true);
+            } else {
+                showLogin();
+            }
+            
+            initializeKpiStates();
+            setupUserMenu();
+        });
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); deferredPrompt = e;
+            const installButtonLogin = document.getElementById('install-pwa-login-button');
+            const installButtonHeader = document.getElementById('install-pwa-header-button');
+            const showInstallButtons = () => { if (installButtonLogin) installButtonLogin.classList.remove('hidden'); if (installButtonHeader) installButtonHeader.classList.remove('hidden'); };
+            const installHandler = () => {
+                if (installButtonLogin) installButtonLogin.classList.add('hidden'); if (installButtonHeader) installButtonHeader.classList.add('hidden');
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+            };
+            showInstallButtons();
+            if (installButtonLogin) installButtonLogin.addEventListener('click', installHandler);
+            if (installButtonHeader) installButtonHeader.addEventListener('click', installHandler);
         });
 
     </script>
