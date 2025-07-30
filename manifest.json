@@ -1,0 +1,21 @@
+{
+  "name": "Prisme Sales - Dashboard de Performance Avançado",
+  "short_name": "Dashboard Ads",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#059669",
+  "description": "Um dashboard avançado para análise de performance de campanhas de marketing.",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/nattanlima/meu-crm-pwa/main/icons/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/nattanlima/meu-crm-pwa/main/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
